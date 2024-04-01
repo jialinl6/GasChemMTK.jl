@@ -1,9 +1,15 @@
 module EmissionExt
 using GasChem, EarthSciData, ModelingToolkit, Dates, EarthSciMLBase, Unitful
 
+function date(t)
+    return Dates.unix2datetime(t)
+end
+@register_symbolic date(t)
+
 struct Emission <: EarthSciMLODESystem
     sys::ODESystem
-    function GasChem.Emission(t)
+    function Emission(emis)
+        t = ModelingToolkit.get_iv(emis.sys)
         P = 101325 # Pa
         Tep = 298.15 # K
         R = 8.314 # Pa*m3/(mol*K)
@@ -13,10 +19,11 @@ struct Emission <: EarthSciMLODESystem
 		lon = -100.0
         lat = 30.0
         lev = 1.0
-        @parameters Δz = 60 [unit = u"m"]
+        # @parameters Δz = 60 [unit = u"m"]
         @parameters uu = 1 [unit = u"nmol/mol/s"]
+        # @parameters t [unit = u"s"]
         Δz2 = 60.0
-        emis = NEI2016MonthlyEmis{Float64}("mrggrid_withbeis_withrwc", t, lon, lat, lev, Δz)
+        # emis = NEI2016MonthlyEmis{Float64}("mrggrid_withbeis_withrwc", t, lon, lat, lev, Δz)
         fs = emis.fileset
 
         D = Differential(t)
@@ -48,10 +55,10 @@ struct Emission <: EarthSciMLODESystem
 			D(ISOP) ~ uu * EarthSciData.interp!(EarthSciData.DataSetInterpolator{Float64}(fs, "ISOP", default_time), date(t), lon, lat, lev)* 2000 / 2240 * 1e15 * R * Tep / (Δz2 * emis_vars[ISOP][2] * P * 3600 * 24)
         ]
 
-        new(ODESystem(eqs, t, [NO, NO2, CH2O, CH4, CO, SO2, ISOP], [Δz, uu]; name=:Emission))
+        new(ODESystem(eqs, t, [NO, NO2, CH2O, CH4, CO, SO2, ISOP], [uu]; name=:Emission))
     end
 end 
 
-Base.:(+)(e::Emission, b::SuperFast) = operator_compose(b, e)
-Base.:(+)(b::SuperFast, e::Emission) = e + b
+Base.:(+)(e::NEI2016MonthlyEmis, b::SuperFast) = operator_compose(b, Emission(e))
+Base.:(+)(b::SuperFast, e::NEI2016MonthlyEmis) = operator_compose(b, Emission(e))
 end
