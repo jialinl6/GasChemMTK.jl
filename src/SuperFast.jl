@@ -27,10 +27,11 @@ plot(sol)
 function SuperFast(;name=:SuperFast, rxn_sys=false)
     params = @parameters(
         jO31D = 4.0 * 10.0^-3, [unit = u"s^-1"],
-        j2OH = 2.2 * 10.0^-10, [unit = u"(s*ppb)^-1"],
+        # j2OH = 2.2 * 10.0^-10, [unit = u"(s*ppb)^-1"],
         jH2O2 = 1.0097 * 10.0^-5, [unit = u"s^-1"],
         jNO2 = 0.0149, [unit = u"s^-1"],
         jCH2Oa = 0.00014, [unit = u"s^-1"],
+        jCH2Ob = 0.00014, [unit = u"s^-1"],
         # TODO(JL): What's difference between the two photolysis reactions of CH2O, do we really need both? (@variables jCH20b(t) = 0.00014 [unit = u"s^-1"])
         jCH3OOH = 8.9573 * 10.0^-6, [unit = u"s^-1"],
         k1 = 1.7e-12, [unit = u"(s*ppb)^-1"], T1 = -940, [unit = u"K"],
@@ -53,7 +54,14 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         k18 = 1.8e-12, [unit = u"(s*ppb)^-1"],
         k19 = 1.5e-13, [unit = u"(s*ppb)^-1"],
         T = 280.0, [unit = u"K", description = "Temperature"],
-        P = 101325, [unit = u"Pa", description = "Pressure (not directly used)"],
+        P = 101325, [unit = u"Pa", description = "Pressure"],
+        O2 = 2.1 * (10.0^8), [isconstantspecies=true,unit = u"ppb"],
+        CH4 = 1700.0, [isconstantspecies=true, unit = u"ppb"],
+        K_300 = 300, [unit = u"K"],
+        k_unit = 1, [unit = u"(s*ppb)^-1"],
+        k20 = 1.45*10^-10, [unit = u"(s*ppb)^-1"] , T20 = 89, [unit = u"K"],
+        num_density = 2.7e19, [description = "Number density of air (The units should be molecules/cm^3 but the equations here treat it as unitless)."],
+        ppb_unit = 1e-9, [description = "Convert from mol/mol_air to ppb, should be in unit of ppb"],
     )
 
     species = @species(
@@ -61,11 +69,9 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         O1d(t) = 0.00001, [unit = u"ppb"],
         OH(t) = 10.0, [unit = u"ppb"],
         HO2(t) = 10.0, [unit = u"ppb"],
-        O2(t) = 2.1 * (10.0^8), [unit = u"ppb"],
         H2O(t) = 450.0, [unit = u"ppb"],
         NO(t) = 0.0, [unit = u"ppb"],
         NO2(t) = 10.0, [unit = u"ppb"],
-        CH4(t) = 1700.0, [unit = u"ppb"],
         CH3O2(t) = 0.01, [unit = u"ppb"],
         CH2O(t) = 0.15, [unit = u"ppb"],
         CO(t) = 275.0, [unit = u"ppb"],
@@ -75,14 +81,34 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         SO2(t) = 2.0, [unit = u"ppb"],
         ISOP(t) = 0.15, [unit = u"ppb"],
         H2O2(t) = 2.34, [unit = u"ppb"],
+        HNO3(t) = 10, [unit = u"ppb"],
     )
-    @constants P_hack = 1.0e20, [unit = u"Pa*ppb*s", description = "Constant for hack to avoid dropping pressure from the model"]
+    #@constants P_hack = 1.0e20, [unit = u"Pa*ppb*s", description = "Constant for hack to avoid dropping pressure from the model"]
 
-    c = 2.46e10 # TODO(JL): What is this constant?
+    @constants A = 6.02e23 [unit = u"mol^-1", description = "Avogadro's number, should be in unit of molec/mol"]
+    @constants R = 8.314e6 [unit = u"(Pa)/(K*mol)", description = "universal gas constant, should be in unit of (Pa*cm^3)/(K*mol)"]
+    air_volume = R*T/P
+    c = A/air_volume*ppb_unit
+    # = 2.46e10 # TODO(JL): What is this constant?
     rate(k, Tc) = k * exp(Tc / T) * c
+
+    function arr3(T, num_density, a1, b1, c1, a2, b2, c2, fv)
+        arr(T,a0,b0,c0) = a0 * exp(c0 / T) * (K_300 / T)^b0
+        alow = arr(T, a1, b1, c1)
+        ahigh = arr(T, a2, b2, c2)
+        rlow = alow * num_density
+        rhigh = ahigh
+        xyrat = rlow / rhigh
+        blog = log10(xyrat)
+        fexp = 1.0 / (1.0 + (blog * blog))
+        k = rlow * (fv^fexp) / (1.0 + xyrat)
+        return k*k_unit
+    end
 
     # Create reaction system, ignoring aqueous chemistry.
     rxs = [
+        #NO2 + OH {+M} --> HNO3 {+M}
+        Reaction(arr3(T, num_density, 1.8e30, 3.0, 0.0, 2.8e-11, 0.0, 0.0, 0.6)*c, [NO2, OH], [HNO3])
         #O3 + OH --> HO2 + O2
         Reaction(rate(k1, T1), [O3, OH], [HO2, O2], [1, 1], [1, 1])
         #HO2 + O3 --> 2O2 + OH
@@ -118,7 +144,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         #O3 -> O2 + O(1D)
         Reaction(jO31D * 10^(-21), [O3], [O1d, O2], [1], [1, 1]) # TODO(JL): Is 10^(-20) a reasonable value?
         #O(1D) + H2O -> 2OH
-        Reaction(j2OH * 100, [O1d, H2O], [OH], [1, 1], [2]) # TODO(CT): Why is the rate multiplied by 10^2?
+        Reaction(rate(k20, T20), [O1d, H2O], [OH], [1, 1], [2])
         #H2O2 --> 2OH
         Reaction(jH2O2, [H2O2], [OH], [1], [2])
         #NO2 --> NO + O3
@@ -126,6 +152,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         #CH2O --> CO + 2HO2
         Reaction(jCH2Oa, [CH2O], [CO, HO2], [1], [1, 2])
         #CH2O --> CO
+        Reaction(jCH2Ob, [CH2O], [CO], [1], [1])
         # TODO(JL): What's difference between the two photolysis reactions of CH2O, do we really need both? (Reaction(jCH20b, [CH2O], [CO], [1], [1]))
         #CH3OOH --> CH2O + HO2 + OH
         Reaction(jCH3OOH, [CH3OOH], [CH2O, HO2, OH], [1], [1, 1, 1])
@@ -134,7 +161,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         #OH + H2O2 = H2O + HO2
         Reaction(k18 * c, [OH, H2O2], [H2O, HO2], [1, 1], [1, 1])
         #OH + CO = HO2
-        Reaction(k19 * c + P/P_hack, [OH, CO], [HO2], [1, 1], [1])
+        Reaction(k19 * c, [OH, CO], [HO2], [1, 1], [1])
         # FIXME(CT): Currently adding P*1e-20 to avoid pressure getting dropped from the model, so we can use it during coupling (for example, during emissions unit conversion).
     ]
     # We set `combinatoric_ratelaws=false` because we are modeling macroscopic rather than microscopic behavior. 
