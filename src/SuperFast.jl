@@ -44,10 +44,10 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         k8 = 4.1e-13, [unit = u"(s*ppb)^-1"], T8 = 750, [unit = u"K"],
         k9 = 2.7e-12, [unit = u"(s*ppb)^-1"], T9 = 200, [unit = u"K"],
         k11 = 2.8e-12, [unit = u"(s*ppb)^-1"], T11 = 300, [unit = u"K"],
-        k12 = 9.5e-14, [unit = u"s^-1*(ppb)^-19"], T12 = 390, [unit = u"K"],
+        k12 = 9.5e-14, [unit = u"(s*ppb)^-1"], T12 = 390, [unit = u"K"],
         k13 = 1.1e-11, [unit = u"(s*ppb)^-1"], T13 = -240, [unit = u"K"],
         k14 = 2.7e-11, [unit = u"(s*ppb)^-1"], T14 = 390, [unit = u"K"],
-        k15 = 2.7e-11, [unit = u"s^-1*(ppb)^-3"], T15 = 390, [unit = u"K"],
+        k15 = 2.7e-11, [unit = u"(s*ppb)^-1"], T15 = 390, [unit = u"K"],
         k16 = 5.59e-15, [unit = u"(s*ppb)^-1"], T16 = -1814, [unit = u"K"],
         k17 = 3.0e-13, [unit = u"(s*ppb)^-1"], T17 = 460, [unit = u"K"],
         k18 = 1.8e-12, [unit = u"(s*ppb)^-1"],
@@ -148,7 +148,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         #CH2O --> CO + 2HO2
         Reaction(jCH2Oa, [CH2O], [CO, HO2], [1], [1, 2])
         #CH2O --> CO
-        Reaction(jCH2Ob, [CH2O], [CO], [1], [1])
+        #Reaction(jCH2Ob, [CH2O], [CO], [1], [1])
         #CH3OOH --> CH2O + HO2 + OH
         Reaction(jCH3OOH, [CH3OOH], [CH2O, HO2, OH], [1], [1, 1, 1])
         #HO2 + HO2 = H2O2 + O2
