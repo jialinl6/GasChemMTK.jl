@@ -106,7 +106,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
     # Create reaction system, ignoring aqueous chemistry.
     rxs = [
         #NO2 + OH {+M} --> HNO3 {+M}
-        Reaction(arr3(T, num_density, 1.8e30, 3.0, 0.0, 2.8e-11, 0.0, 0.0, 0.6), [NO2, OH], [HNO3])
+        #Reaction(arr3(T, num_density, 1.8e30, 3.0, 0.0, 2.8e-11, 0.0, 0.0, 0.6), [NO2, OH], [HNO3])
         #O3 + OH --> HO2 + O2
         Reaction(rate(k1, T1), [O3, OH], [HO2, O2], [1, 1], [1, 1])
         #HO2 + O3 --> 2O2 + OH
