@@ -79,7 +79,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         SO2(t) = 2.0, [unit = u"ppb"],
         ISOP(t) = 0.15, [unit = u"ppb"],
         H2O2(t) = 2.34, [unit = u"ppb"],
-        HNO3(t) = 10, [unit = u"ppb"],
+        #HNO3(t) = 10, [unit = u"ppb"],
     )
     #@constants P_hack = 1.0e20, [unit = u"Pa*ppb*s", description = "Constant for hack to avoid dropping pressure from the model"]
 
