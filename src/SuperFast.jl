@@ -81,7 +81,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
     @constants R = 8.314e6 [unit = u"(Pa)/(K*mol)", description = "universal gas constant, should be in unit of (Pa*cm^3)/(K*mol)"]
 
     #c = 2.46e10 # TODO(JL): What is this constant?
-    c = A*P/(T*R)*e-9
+    c = A*P/(T*R)*1e-9
     rate(k, Tc) = k * exp(Tc / T) * c
 
     # Create reaction system, ignoring aqueous chemistry.
