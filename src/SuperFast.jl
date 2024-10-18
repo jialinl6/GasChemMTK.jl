@@ -76,9 +76,12 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         ISOP(t) = 0.15, [unit = u"ppb"],
         H2O2(t) = 2.34, [unit = u"ppb"],
     )
-    @constants P_hack = 1.0e20, [unit = u"Pa*ppb*s", description = "Constant for hack to avoid dropping pressure from the model"]
+    #@constants P_hack = 1.0e20, [unit = u"Pa*ppb*s", description = "Constant for hack to avoid dropping pressure from the model"]
+    @constants A = 6.02e23 [unit = u"mol^-1", description = "Avogadro's number, should be in unit of molec/mol"]
+    @constants R = 8.314e6 [unit = u"(Pa)/(K*mol)", description = "universal gas constant, should be in unit of (Pa*cm^3)/(K*mol)"]
 
-    c = 2.46e10 # TODO(JL): What is this constant?
+    #c = 2.46e10 # TODO(JL): What is this constant?
+    c = A*P/(T*R)*e-9
     rate(k, Tc) = k * exp(Tc / T) * c
 
     # Create reaction system, ignoring aqueous chemistry.
@@ -134,7 +137,8 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         #OH + H2O2 = H2O + HO2
         Reaction(k18 * c, [OH, H2O2], [H2O, HO2], [1, 1], [1, 1])
         #OH + CO = HO2
-        Reaction(k19 * c + P/P_hack, [OH, CO], [HO2], [1, 1], [1])
+        #Reaction(k19 * c + P/P_hack, [OH, CO], [HO2], [1, 1], [1])
+        Reaction(k19 * c, [OH, CO], [HO2], [1, 1], [1])
         # FIXME(CT): Currently adding P*1e-20 to avoid pressure getting dropped from the model, so we can use it during coupling (for example, during emissions unit conversion).
     ]
     # We set `combinatoric_ratelaws=false` because we are modeling macroscopic rather than microscopic behavior. 
