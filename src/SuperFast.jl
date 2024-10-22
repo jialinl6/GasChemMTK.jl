@@ -52,6 +52,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         k17 = 3.0e-13, [unit = u"(s*ppb)^-1"], T17 = 460, [unit = u"K"],
         k18 = 1.8e-12, [unit = u"(s*ppb)^-1"],
         k19 = 1.5e-13, [unit = u"(s*ppb)^-1"],
+        ko1d = 1.45e-10, [unit = u"(s*ppb)^-1"], To1d = 89, [unit = u"K"],
         T = 280.0, [unit = u"K", description = "Temperature"],
         P = 101325, [unit = u"Pa", description = "Pressure (not directly used)"],
     )
@@ -121,7 +122,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         #O3 -> O2 + O(1D)
         Reaction(jO31D * 10^(-21), [O3], [O1d, O2], [1], [1, 1]) # TODO(JL): Is 10^(-20) a reasonable value?
         #O(1D) + H2O -> 2OH
-        Reaction(j2OH * 100, [O1d, H2O], [OH], [1, 1], [2]) # TODO(CT): Why is the rate multiplied by 10^2?
+        Reaction(rate(ko1d, To1d), [O1d, H2O], [OH], [1, 1], [2]) # TODO(CT): Why is the rate multiplied by 10^2?
         #H2O2 --> 2OH
         Reaction(jH2O2, [H2O2], [OH], [1], [2])
         #NO2 --> NO + O3
