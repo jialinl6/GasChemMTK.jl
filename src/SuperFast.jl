@@ -55,6 +55,8 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         ko1d = 1.45e-10, [unit = u"(s*ppb)^-1"], To1d = 89, [unit = u"K"],
         T = 280.0, [unit = u"K", description = "Temperature"],
         P = 101325, [unit = u"Pa", description = "Pressure (not directly used)"],
+        k_unit = 1, [unit = u"(s*ppb)^-1"],
+        K_300 = 300, [unit - u"K", description = "parameter used in three boday reaction rate calculation"]
     )
 
     species = @species(
@@ -76,6 +78,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         SO2(t) = 2.0, [unit = u"ppb"],
         ISOP(t) = 0.15, [unit = u"ppb"],
         H2O2(t) = 2.34, [unit = u"ppb"],
+        HNO3(t) = 10, [unit = u"ppb"],
     )
     #@constants P_hack = 1.0e20, [unit = u"Pa*ppb*s", description = "Constant for hack to avoid dropping pressure from the model"]
     @constants A = 6.02e23 [unit = u"mol^-1", description = "Avogadro's number, should be in unit of molec/mol"]
@@ -85,8 +88,23 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
     c = A*P/(T*R)*1e-9
     rate(k, Tc) = k * exp(Tc / T) * c
 
+    function arr3(a1, b1, c1, a2, b2, c2, fv)
+        arr(T,a0,b0,c0) = a0 * exp(c0 / T) * (K_300 / T)^b0
+        alow = arr(T, a1, b1, c1)
+        ahigh = arr(T, a2, b2, c2)
+        rlow = alow * A*P/(T*R)
+        rhigh = ahigh
+        xyrat = rlow / rhigh
+        blog = log10(xyrat)
+        fexp = 1.0 / (1.0 + (blog * blog))
+        k = rlow * (fv^fexp) / (1.0 + xyrat)
+        return k*k_unit*c
+    end
+
     # Create reaction system, ignoring aqueous chemistry.
     rxs = [
+        #NO2 + OH {+M} --> HNO3 {+M}
+        Reaction(arr3(1.8e30, 3.0, 0.0, 2.8e-11, 0.0, 0.0, 0.6), [NO2, OH], [HNO3])
         #O3 + OH --> HO2 + O2
         Reaction(rate(k1, T1), [O3, OH], [HO2, O2], [1, 1], [1, 1])
         #HO2 + O3 --> 2O2 + OH
