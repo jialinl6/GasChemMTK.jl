@@ -56,7 +56,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         T = 280.0, [unit = u"K", description = "Temperature"],
         P = 101325, [unit = u"Pa", description = "Pressure (not directly used)"],
         k_unit = 1, [unit = u"(s*ppb)^-1"],
-        K_300 = 300, [unit - u"K", description = "parameter used in three boday reaction rate calculation"]
+        K_300 = 300, [unit = u"K", description = "parameter used in three boday reaction rate calculation"]
     )
 
     species = @species(
