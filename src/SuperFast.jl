@@ -44,10 +44,10 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         k9 = 2.7e-12, [unit = u"(s*ppb)^-1"], T9 = 200, [unit = u"K"],
         k10 = 1.1e-12, [unit = u"(s*ppb)^-1"], T10 = 200, [unit = u"K"],
         k11 = 2.8e-12, [unit = u"(s*ppb)^-1"], T11 = 300, [unit = u"K"],
-        k12 = 9.5e-14 / 10, [unit = u"s^-1*(ppb)^-19"], T12 = 390, [unit = u"K"],
+        k12 = 9.5e-14, [unit = u"(s*ppb)^-1"], T12 = 390, [unit = u"K"],
         k13 = 1.1e-11, [unit = u"(s*ppb)^-1"], T13 = -240, [unit = u"K"],
         k14 = 2.7e-11, [unit = u"(s*ppb)^-1"], T14 = 390, [unit = u"K"],
-        k15 = 2.7e-11 / 2, [unit = u"s^-1*(ppb)^-3"], T15 = 390, [unit = u"K"],
+        k15 = 2.7e-11, [unit = u"(s*ppb)^-1"], T15 = 390, [unit = u"K"],
         k16 = 5.59e-15, [unit = u"(s*ppb)^-1"], T16 = -1814, [unit = u"K"],
         k17 = 3.0e-13, [unit = u"(s*ppb)^-1"], T17 = 460, [unit = u"K"],
         k18 = 1.8e-12, [unit = u"(s*ppb)^-1"],
@@ -109,14 +109,14 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         Reaction(rate(k10, T10), [CH3OOH, OH], [CH3O, H2O, OH], [1, 1], [1, 1, 1])
         #CH3O2 + NO --> CH2O + HO2 + NO2    
         Reaction(rate(k11, T11), [CH3O2, NO], [CH2O, HO2, NO2], [1, 1], [1, 1, 1])
-        #10CH3O2 + 10CH3O2 --> 20CH2O + 8HO2
-        Reaction(rate(k12, T12), [CH3O2], [CH2O, H2O], [20], [20, 8])
+        #CH3O2 + CH3O2 --> 2CH2O + 0.8HO2
+        Reaction(rate(k12, T12), [CH3O2], [CH2O, H2O], [2.0], [2, 0.8])
         #DMS + OH --> SO2
         Reaction(rate(k13, T13), [DMS, OH], [SO2], [1, 1], [1])
         #ISOP +OH --> 2CH3O2
         Reaction(rate(k14, T14), [ISOP, OH], [CH3O2], [1, 1], [2])
-        #2ISOP + 2OH --> 2ISOP + OH
-        Reaction(rate(k15, T15), [ISOP, OH], [ISOP, OH], [2, 2], [2, 1])
+        #ISOP + OH --> ISOP + 0.5OH
+        Reaction(rate(k15, T15), [ISOP, OH], [ISOP, OH], [1, 1.0], [1, 0.5])
         #ISOP + O3 --> 0.87CH2O + 1.86CH3O2 + 0.06HO2 + 0.05CO
         Reaction(rate(k16, T16), [ISOP, O3], [CH2O, CH3O2, HO2, CO], [1, 1.0], [0.87, 1.86, 0.06, 0.05])
         #O3 -> O2 + O(1D)
