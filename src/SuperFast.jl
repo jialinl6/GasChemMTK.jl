@@ -237,15 +237,15 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         rOHCO(T, P), OH + CO --> HO2
         arr(T, P, 5.50e-12, 0.0, 125.0), CH2O + OH --> CO + HO2 + H2O 
         arr(T, P, 4.10e-13, 0.0, 750.0), CH3O2+ HO2 --> CH3OOH + O2                       
-        arr(T, P, 2.66E-12, 0.0, 200.0), CH3OOH + OH --> CH3O2+ H2O                        
-        arr(T, P, 1.14E-12, 0.0, 200.0), CH3OOH + OH --> CH2O + OH + H2O                   
-        arr(T, P, 2.80E-12, 0.0, 300.0), CH3O2+ NO --> CH2O + HO2 + NO2                
-        arr(T, P, 9.50E-14, 0.0, 390.0), CH3O2+ CH3O2 --> 2.000CH2O + 0.800HO2  #{two different reactions simplified into one}
+        arr(T, P, 2.66e-12, 0.0, 200.0), CH3OOH + OH --> CH3O2+ H2O                        
+        arr(T, P, 1.14e-12, 0.0, 200.0), CH3OOH + OH --> CH2O + OH + H2O                   
+        arr(T, P, 2.80e-12, 0.0, 300.0), CH3O2+ NO --> CH2O + HO2 + NO2                
+        arr(T, P, 9.50e-14, 0.0, 390.0), CH3O2+ CH3O2 --> 2.000CH2O + 0.800HO2  #{two different reactions simplified into one}
         cons(4.00e-24, T, P), H2O + NO2 --> 0.5HNO3                       
-        arr(T, P, 2.7E-11, 0.0, 390.0), ISOP + OH --> CH3O2+ CH3O2 #{Isoprene chemistry parametrized from UCI for ISOP + OH}
-        arr(T, P, 2.7E-11, 0.0, 390.0), ISOP + OH --> ISOP   #{Isoprene chemistry parametrized from UCI for ISOP + OH}
-        arr(T, P, 2.7E-11, 0.0, 390.0), ISOP + OH --> ISOP + 0.500OH #{Isoprene chemistry parametrized from UCI for ISOP + OH}
-        arr(T, P, 5.59E-15, 0.0, -1814.0), ISOP + O3 --> 0.870CH2O + 1.860CH3O2+ 0.060HO2 + 0.050CO   #{Isoprene chemistry parametrized from LLNL-IMPACT for ISOP + O3}
+        arr(T, P, 2.7e-11, 0.0, 390.0), ISOP + OH --> CH3O2+ CH3O2 #{Isoprene chemistry parametrized from UCI for ISOP + OH}
+        arr(T, P, 2.7e-11, 0.0, 390.0), ISOP + OH --> ISOP   #{Isoprene chemistry parametrized from UCI for ISOP + OH}
+        arr(T, P, 2.7e-11, 0.0, 390.0), ISOP + OH --> ISOP + 0.500OH #{Isoprene chemistry parametrized from UCI for ISOP + OH}
+        arr(T, P, 5.59e-15, 0.0, -1814.0), ISOP + O3 --> 0.870CH2O + 1.860CH3O2+ 0.060HO2 + 0.050CO   #{Isoprene chemistry parametrized from LLNL-IMPACT for ISOP + O3}
 
         #photolysis reactions
         jO31D, O3 --> O1d + O2
