@@ -17,12 +17,14 @@ end
 function EarthSciMLBase.couple2(c::SuperFastCoupler, p::FastJXCoupler)
     c, p = c.sys, p.sys
     c = param_to_var(convert(ODESystem, c), :jO31D, :jH2O2, :jNO2, :jCH2Oa, :jCH2Ob, :jCH3OOH)
+    @constants uconv = 1 [unit = u"s"]
+    @constants c_fixme1 = 10^(-21) [unit = u"s", description="Suspicious constant"] # FIXME: Suspicious constant
     ConnectorSystem([
-            c.jH2O2 ~ p.j_h2o2
-            c.jCH2Oa ~ p.j_CH2Oa
-            c.jCH2Ob ~ p.j_CH2Ob
-            c.jCH3OOH ~ p.j_CH3OOH
-            c.jNO2 ~ p.j_NO2
-            c.jO31D ~ p.j_o31D
+            c.jH2O2 ~ uconv * p.j_h2o2
+            c.jCH2Oa ~ uconv * p.j_CH2Oa
+            c.jCH2Ob ~ uconv * p.j_CH2Ob
+            c.jCH3OOH ~ uconv * p.j_CH3OOH
+            c.jNO2 ~ uconv * p.j_NO2
+            c.jO31D ~ c_fixme1 * p.j_o31D
         ], c, p)
 end
