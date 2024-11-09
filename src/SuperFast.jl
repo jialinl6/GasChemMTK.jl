@@ -193,25 +193,24 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
 
     rx_sys = @reaction_network SuperFast begin
         @parameters(
-            jO31D = 4.0e-3, #[unit = u"s^-1"],
+            jO32OH = 2.27e-4, #[unit = u"s^-1"],
             jH2O2 = 1.0097e-5, #[unit = u"s^-1"],
             jNO2 = 0.0149, #[unit = u"s^-1"],
             jCH2Oa = 0.00014, #[unit = u"s^-1"],
             jCH2Ob = 0.00014, #[unit = u"s^-1"],
             jCH3OOH = 8.9573e-6, #[unit = u"s^-1"],
             T = 280.0, [unit = u"K", description = "Temperature"],
-            P = 101325, [unit = u"Pa", description = "Pressure (not directly used)"],
+            P = 101325, [unit = u"Pa", description = "Pressure"],
             O2 = 2.1e8, [isconstantspecies=true,unit = u"ppb"],
             CH4 = 1700.0, [isconstantspecies=true, unit = u"ppb"],
         )
 
         @species(
-            O3(t) = 10.0, [unit = u"ppb"],
-            O1d(t) = 0.00001, [unit = u"ppb"],
-            OH(t) = 10.0, [unit = u"ppb"],
-            HO2(t) = 10.0, [unit = u"ppb"],
+            O3(t) = 20.0, [unit = u"ppb"],
+            OH(t) = 0.01, [unit = u"ppb"],
+            HO2(t) = 0.01, [unit = u"ppb"],
             H2O(t) = 450.0, [unit = u"ppb"],
-            NO(t) = 0.0, [unit = u"ppb"],
+            NO(t) = 10.0, [unit = u"ppb"],
             NO2(t) = 10.0, [unit = u"ppb"],
             CH3O2(t) = 0.01, [unit = u"ppb"],
             CH2O(t) = 0.15, [unit = u"ppb"],
@@ -228,7 +227,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         arr(T, P, 1.7e-12, 0.0, -940.0), O3 + OH --> HO2 + O2
         arr(T, P, 1.00e-14, 0.0, -490.0), O3 + HO2 --> OH + O2 + O2
         arr(T, P, 4.80e-11, 0.0, 250.0), OH + HO2 --> H2O + O2
-        #rHO2HO2(T, P, H2O, 3.00e-13, 460.0, 2.1e-33, 920.0), HO2 + HO2 --> H2O2 + O2
+        rHO2HO2(T, P, H2O, 3.00e-13, 460.0, 2.1e-33, 920.0), HO2 + HO2 --> H2O2 + O2
         arr(T, P, 1.80e-12, 0.0, 0.0), OH + H2O2 --> H2O + HO2
         arr(T, P, 3.00e-12, 0.0, -1500.0), O3 + NO --> NO2 + O2
         arr(T, P, 3.30e-12, 0.0, 270.0), HO2 + NO --> OH + NO2
@@ -248,8 +247,7 @@ function SuperFast(;name=:SuperFast, rxn_sys=false)
         arr(T, P, 5.59e-15, 0.0, -1814.0), ISOP + O3 --> 0.870CH2O + 1.860CH3O2+ 0.060HO2 + 0.050CO   #{Isoprene chemistry parametrized from LLNL-IMPACT for ISOP + O3}
 
         #photolysis reactions
-        jO31D, O3 --> O1d + O2
-        arr(T, P, 1.45e-10, 0.0, 89.0), O1d + H2O --> 2OH
+        jO32OH, O3 --> 2OH #simplified reaction of: O3 --> O2 + O1d; O1d + H2O --> 2OH
         jH2O2, H2O2 --> 2OH
         jNO2, NO2 --> NO + O3
         jCH2Oa, CH2O --> HO2 + HO2 + CO

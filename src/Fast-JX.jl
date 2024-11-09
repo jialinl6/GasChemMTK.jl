@@ -129,12 +129,12 @@ end
 # Dummy functions for unit validation. Basically ModelingToolkit 
 # will call the function with a DynamicQuantities.Quantity or an integer to 
 # get information about the type and units of the output.
-j_mean_H2O2(t, lat, long, T::DynamicQuantities.Quantity) = 0.0u"s^-1"
-j_mean_CH2Oa(t, lat, long, T::DynamicQuantities.Quantity) = 0.0u"s^-1"
-j_mean_CH2Ob(t, lat, long, T::DynamicQuantities.Quantity) = 0.0u"s^-1"
-j_mean_CH3OOH(t, lat, long, T::DynamicQuantities.Quantity) = 0.0u"s^-1"
-j_mean_NO2(t, lat, long, T::DynamicQuantities.Quantity) = 0.0u"s^-1"
-j_mean_o31D(t, lat, long, T::DynamicQuantities.Quantity) = 0.0u"s^-1"
+j_mean_H2O2(t, lat, long, T::DynamicQuantities.Quantity) = 0.0#u"s^-1"
+j_mean_CH2Oa(t, lat, long, T::DynamicQuantities.Quantity) = 0.0#u"s^-1"
+j_mean_CH2Ob(t, lat, long, T::DynamicQuantities.Quantity) = 0.0#u"s^-1"
+j_mean_CH3OOH(t, lat, long, T::DynamicQuantities.Quantity) = 0.0#u"s^-1"
+j_mean_NO2(t, lat, long, T::DynamicQuantities.Quantity) = 0.0#u"s^-1"
+j_mean_o31D(t, lat, long, T::DynamicQuantities.Quantity) = 0.0#u"s^-1"
 
 j_mean_H2O2(t, lat, long, T) = j_mean(σ_H2O2_interp, ϕ_H2O2_jx, t, lat, long, T)
 @register_symbolic j_mean_H2O2(t, lat, long, T)
@@ -148,6 +148,42 @@ j_mean_NO2(t, lat, long, T) = j_mean(σ_NO2_interp, ϕ_NO2_jx, t, lat, long, T)
 @register_symbolic j_mean_NO2(t, lat, long, T)
 j_mean_o31D(t, lat, long, T) = j_mean(σ_o31D_interp, ϕ_o31D_jx, t, lat, long, T)
 @register_symbolic j_mean_o31D(t, lat, long, T)
+
+"""
+    adjust_j_o31D(j_o31D::T, C_H2O::T, C_H2::T, C_N2::T, C_O2::T, T::T) -> T where {T}
+
+Adjust the photolysis rate of O3 -> O2 + O(1D) to represent the effective rate for O3 -> 2OH.
+This adjustment is based on the fraction of O(1D) that reacts with H2O to produce 2 OH.
+"""
+function adjust_j_o31D(T, P, H2O)
+    @constants(
+        T_unit = 1, [unit = u"K", description = "inverse unit of Temperature"],
+        A = 6.02e23, [unit = u"molec/mol", description = "Avogadro's number"],
+        R = 8.314e6, [unit = u"(Pa*cm^3)/(K*mol)", description = "universal gas constant"],
+        ppb_unit = 1e-9, [unit = u"ppb", description = "Convert from mol/mol_air to ppb"],
+        num_density_unit_inv = 1, [unit = u"cm^3/molec", description = "multiply by num_density to obtain the unitless value of num_density"],
+        ppb_inv = 1, [unit = u"ppb^-1"],
+    )
+    num_density_unitless = A*P/(R*T)*num_density_unit_inv
+
+    # Define species concentrations value in unit of molec/cm3
+    C_H2O = H2O*ppb_inv*1e-9*num_density_unitless # convert value of H2O concentration in unit of ppb to unit of molec/cm3, but here is unitless
+    C_O2 = 0.2095 * num_density_unitless
+    C_N2 = 0.7808 * num_density_unitless
+    C_H2 = 0.5e-6 * num_density_unitless
+
+    # Define rate constants for reactions involving O(1D)
+    RO1DplH2O = 1.63e-10 * exp(60.0*T_unit / T) * C_H2O
+    RO1DplH2  = 1.2e-10 * C_H2
+    RO1DplN2  = 2.15e-11 * exp(110.0*T_unit / T) * C_N2
+    RO1DplO2  = 3.30e-11 * exp(55.0*T_unit / T) * C_O2
+
+    # Total rate constant for O(1D)
+    RO1D = RO1DplH2O + RO1DplH2 + RO1DplN2 + RO1DplO2
+
+    # Prevent division by zero
+    return RO1DplH2O / RO1D
+end
 
 struct FastJXCoupler
     sys
@@ -165,25 +201,30 @@ Build Fast-JX model
 """
 function FastJX(;name=:FastJX)
     @parameters T = 298.0 [unit = u"K", description = "Temperature"]
+    @parameters P = 101325 [unit = u"Pa", description = "Pressure"]
     @parameters lat = 40.0 [description = "Latitude (Degrees)"]
     @parameters long = -97.0 [description = "Longitude (Degrees)"]
+    @parameters H2O = 450.0 [unit = u"ppb"]
 
-    @variables j_h2o2(t) = 1.0097 * 10.0^-5 [unit = u"s^-1"]
-    @variables j_CH2Oa(t) = 0.00014 [unit = u"s^-1"]
-    @variables j_o31D(t) = 4.0 * 10.0^-3 [unit = u"s^-1"]
-    @variables j_CH3OOH(t) = 8.9573 * 10.0^-6 [unit = u"s^-1"]
-    @variables j_NO2(t) = 0.0149 [unit = u"s^-1"]
-    @variables j_CH2Ob(t) = 0.00014 [unit = u"s^-1"]
+    @variables j_h2o2(t) = 1.0097e-5 #[unit = u"s^-1"]
+    @variables j_CH2Oa(t) = 0.00014 #[unit = u"s^-1"]
+    @variables j_o31D(t) = 4.0e-3 #[unit = u"s^-1"]
+    @variables j_o32OH(t) = 2.27e-4 #[unit = u"s^-1"]
+    @variables j_CH3OOH(t) = 8.9573e-6 #[unit = u"s^-1"]
+    @variables j_NO2(t) = 0.0149 #[unit = u"s^-1"]
+    @variables j_CH2Ob(t) = 0.00014 #[unit = u"s^-1"]
 
     eqs = [
         j_h2o2 ~ j_mean_H2O2(t, lat, long, T)
         j_CH2Oa ~ j_mean_CH2Oa(t, lat, long, T)
         j_CH2Ob ~ j_mean_CH2Ob(t, lat, long, T)
-        j_o31D ~ j_mean_o31D(t, lat, long, T)
+        j_o31D ~ j_mean_o31D(t, lat, long, T)*1e-17
+        j_o32OH ~ j_o31D*adjust_j_o31D(T, P, H2O)
         j_CH3OOH ~ j_mean_CH3OOH(t, lat, long, T)
         j_NO2 ~ j_mean_NO2(t, lat, long, T)
     ]
 
-    ODESystem(eqs, t, [j_h2o2, j_CH2Oa, j_CH2Ob, j_o31D, j_CH3OOH, j_NO2], [lat, long, T]; name=name,
+    ODESystem(eqs, t, [j_h2o2, j_CH2Oa, j_CH2Ob, j_CH3OOH, j_NO2, j_o32OH], [lat, long, T, P, H2O]; name=name,
         metadata=Dict(:coupletype => FastJXCoupler))
 end
+
