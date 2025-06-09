@@ -8,7 +8,7 @@ begin
 	lt(x, y) = x < y ? one(x) : zero(x)
 
     @register_symbolic lt(x, y)
-    y_max = 1.391000027136e12
+    y_max_vec = [1.391000027136e12, 1.6270000128e12, 1.663999934464e12, 9.27799967744e11, 7.842000011264e12, 4.680000208896e12, 9.918000136192e12, 1.219000008704e13, 6.36400001089536e14, 4.0489998876672e14, 3.15000015028224e14, 5.88900011606016e14, 7.67800029216768e14, 5.04500011925504e14, 8.90200020484096e14, 3.853000128856064e15, 1.546999975378944e16, 2.1310000789140275e17]
 
     # f_frontier_1(x1) = relu(relu((((sqrt_safe(sqrt_safe(sqrt_safe((x1 + x1) + -0.186499174049665) + 0.6621915992603807)) * 1.0607248539895426) + (sqrt_safe(sqrt_safe(sqrt_safe(x1 + x1) + 0.2874994333046278)) + 0.35047649558455163)) + sqrt_safe(x1)) * 1.8866236499091045))
     # surrogate_f_1(x1, x2) = relu(-0.00046878870266649675 - sqrt_safe(x2)) + pow3(pow2(pow3(sqrt_safe(-0.06087366953280214) * relu((f_frontier_1(x1) - x2) - sqrt_safe(pow2(pow3(-0.16237281811768559 * f_frontier_1(relu((3.187962748996749 * x1) - x2)))))))))
@@ -65,7 +65,7 @@ function flux_eqs_surrogate(csa, P)
     @constants c_flux = 1.0 [unit = u"s^-1", description = "Constant actinic flux (for unit conversion)"]
     
     for i in 1:18
-        f = surrogate_funcs[i](csa, P)*y_max
+        f = surrogate_funcs[i](csa, log(P))*y_max_vec[i]
         wl = WL[i]
         n1 = Symbol("F_", Int(round(wl)))
         v1 = @variables $n1(t) [unit = u"s^-1", description = "Actinic flux at $wl nm"]
@@ -121,7 +121,7 @@ function FastJX_surrogate(; name=:FastJX_surrogate)
     @variables j_NO2(t) = 0.0149 [unit = u"s^-1"]
     @variables cosSZA(t) [description = "Cosine of the solar zenith angle"]
 
-    flux_vars, fluxeqs = flux_eqs_surrogate(cosSZA, log(P/P_unit))
+    flux_vars, fluxeqs = flux_eqs_surrogate(cosSZA, P/P_unit)
 
     eqs = [
         cosSZA ~ cos_solar_zenith_angle(t, lat, long);
