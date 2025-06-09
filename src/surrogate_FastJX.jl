@@ -121,7 +121,7 @@ function FastJX_surrogate(; name=:FastJX_surrogate)
     @variables j_NO2(t) = 0.0149 [unit = u"s^-1"]
     @variables cosSZA(t) [description = "Cosine of the solar zenith angle"]
 
-    flux_vars, fluxeqs = flux_eqs_surrogate(cosSZA, P/P_unit)
+    flux_vars, fluxeqs = flux_eqs_surrogate(cosSZA, log(P/P_unit))
 
     eqs = [
         cosSZA ~ cos_solar_zenith_angle(t, lat, long);
