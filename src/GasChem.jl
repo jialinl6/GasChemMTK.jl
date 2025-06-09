@@ -20,6 +20,7 @@ include("geoschem_fullchem.jl")
 include("fastjx_interp.jl")
 include("direct_flux.jl")
 include("Fast-JX.jl")
+include("surrogate_FastJX.jl")
 include("fastjx_couplings.jl")
 
 end

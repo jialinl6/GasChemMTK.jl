@@ -13,3 +13,13 @@ using Test
     sol = solve(ODEProblem(sys, [], tspan, []), Rosenbrock23(), saveat=10.0)
     @test sol[sys.SuperFast₊O3][4320] ≈ sol_middle rtol=1e-4
 end
+
+@testset "2wayCoupling_surrogate" begin
+    sol_middle = 10.121824784154201
+
+    sf = couple(SuperFast(), FastJX_surrogate())
+    sys = convert(ODESystem, sf)
+    tspan = (0.0, 3600 * 24)
+    sol = solve(ODEProblem(sys, [], tspan, []), Rosenbrock23(), saveat=10.0)
+    @test sol[sys.SuperFast₊O3][4320] ≈ sol_middle rtol=1e-4
+end
