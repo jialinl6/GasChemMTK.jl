@@ -1,5 +1,5 @@
 using GasChem
-using OrdinaryDiffEqRosenbrock, ModelingToolkit, DynamicQuantities
+using DifferentialEquations, ModelingToolkit, DynamicQuantities
 
 tspan = (0.0, 360.0)
 
@@ -9,10 +9,10 @@ tspan = (0.0, 360.0)
     rs = structural_simplify(SuperFast())
     sol = solve(
         ODEProblem(rs, [], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
 
     @test sol[rs.O3][end] ≈ answer
@@ -24,18 +24,18 @@ end
     rs1 = structural_simplify(SuperFast())
     o1 = solve(
         ODEProblem(rs1, [rs1.ISOP => 0.54], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     rs2 = structural_simplify(SuperFast())
     o2 = solve(
         ODEProblem(rs2, [rs2.ISOP => 0.13], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     test2 = o1[rs1.O3][end] - o2[rs2.O3][end]
 
@@ -47,19 +47,25 @@ end
 
     rs1 = structural_simplify(SuperFast())
     o1 = solve(
-        ODEProblem(rs1, [rs1.NO2 => 100.0], tspan, [], combinatoric_ratelaws = false),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        ODEProblem(
+            rs1,
+            [rs1.NO2 => 100.0],
+            tspan,
+            [],
+            combinatoric_ratelaws=false,
+        ),
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     rs2 = structural_simplify(SuperFast())
     o2 = solve(
         ODEProblem(rs2, [], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     test3 = o1[rs1.O3][end] - o2[rs2.O3][end]
 
@@ -72,18 +78,18 @@ end
     rs1 = structural_simplify(SuperFast())
     o1 = solve(
         ODEProblem(rs1, [rs1.CO => 50.0], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     rs2 = structural_simplify(SuperFast())
     o2 = solve(
         ODEProblem(rs2, [rs2.CO => 500.0], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     test4 = o1[rs1.O3][end] - o2[rs2.O3][end]
 
@@ -96,18 +102,18 @@ end
     rs1 = structural_simplify(SuperFast())
     o1 = solve(
         ODEProblem(rs1, [rs1.CH4 => 1900.0], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     rs2 = structural_simplify(SuperFast())
     o2 = solve(
         ODEProblem(rs2, [rs2.CH4 => 1600.0], tspan, []),
-        Rosenbrock23(),
-        saveat = 10.0,
-        abstol = 1e-12,
-        reltol = 1e-12
+        Tsit5(),
+        saveat=10.0,
+        abstol=1e-12,
+        reltol=1e-12,
     )
     test5 = o1[rs1.O3][end] - o2[rs1.O3][end]
 
