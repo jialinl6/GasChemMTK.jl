@@ -14,7 +14,7 @@ using Test
     @test sol[sys.SuperFast₊O3][4320] ≈ sol_middle rtol=1e-4
 end
 
-@testset "2wayCoupling_surrogate" begin
+@testset "2wayCoupling_interpolation" begin
 
     sol_symbolic = let 
         sf = couple(SuperFast(), FastJX())
@@ -23,7 +23,7 @@ end
         solve(ODEProblem(sys, [], tspan, []), Rosenbrock23(), saveat=10.0)
     end
 
-    sf = couple(SuperFast(), FastJX_surrogate())
+    sf = couple(SuperFast(), FastJX_interpolation())
     sys = convert(ODESystem, sf)
     tspan = (0.0, 3600 * 24)
     sol = solve(ODEProblem(sys, [], tspan, []), Rosenbrock23(), saveat=10.0)
