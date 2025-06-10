@@ -1,6 +1,6 @@
 export FastJX_interpolation
 
-@load "src/interpolations.jld2" interpolations_18
+@load joinpath(@__DIR__, "interpolations.jld2") interpolations_18
 
 function check_P(P)
     P_result = 101325
