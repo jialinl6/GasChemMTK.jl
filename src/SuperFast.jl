@@ -20,7 +20,7 @@ function rate_toppb(t, T, P, a0; name = :rateconvert)
         a0=a0,
         [unit=u"cm^3/molec/s"],)
     air_volume = R*T/P #unit in cm^3/mol
-    c = A / air_volume * ppb_unit #Convert the second reaction rate value, which corresponds to species with units of molec/cm³, to ppb.
+    c = A / air_volume * ppb_unit # Conversion factor for converting the second reaction rate calculation in cm³·molecule⁻¹·s⁻¹—into ppb⁻¹·s⁻¹.
     @variables k(t) [unit = u"(s*ppb)^-1"]
     ODESystem([k ~ a0 * c], t, [k], []; name = name)
 end
@@ -56,8 +56,30 @@ function arrh(t, T, P, a0, b0, c0; name = :arrhenius)
         [unit=u"K"],)
     @variables k(t) [unit = u"(s*ppb)^-1"]
     air_volume = R*T/P #unit in cm^3/mol
-    c = A / air_volume * ppb_unit #Convert the second reaction rate value, which corresponds to species with units of molec/cm³, to ppb.
+    c = A / air_volume * ppb_unit # Conversion factor for converting the second reaction rate calculation in cm³·molecule⁻¹·s⁻¹—into ppb⁻¹·s⁻¹. units of molec/cm³, to ppb.
     ODESystem([k ~ a0 * exp(c0 / T) * (K_300 / T)^b0 * c], t, [k], []; name = name)
+end
+
+"""
+Original function used in GEOS-Chem; k is treated as unitless, but its actual unit is cm³/molecule/s.
+Arrhenius equation:
+
+```math
+    k = a0 * exp( c0 / T ) * (T/300)^b0
+```
+"""
+function arrh_original(t, T, a0, b0, c0; name = :arrhenius_original)
+    T = ParentScope(T)
+    t = ParentScope(t)
+    @constants(
+        K_300=300,
+        [unit=u"K"],
+        a0=a0,
+        b0=b0,
+        c0=c0,
+        [unit=u"K"],)
+    @variables k(t)
+    ODESystem([k ~ a0 * exp(c0 / T) * (K_300 / T)^b0], t, [k], []; name = name)
 end
 
 """
@@ -81,19 +103,23 @@ function arr_3rd(t, T, P, a1, b1, c1, a2, b2, c2, fv; name = :arr_3rdbody)
         [
             unit=u"cm^3/molec",
             description="multiply by num_density to obtain the unitless value of num_density"
-        ],)
+        ],
+        k_original_unit=1,
+        [unit=u"cm^3/molec/s"])
     num_density_unitless = A*P/(R*T)*num_density_unit_inv
 
-    @named alow = arrh(t, T, P, a1, b1, c1)
-    @named ahigh = arrh(t, T, P, a2, b2, c2)
+    @named alow = arrh_original(t, T, a1, b1, c1)
+    @named ahigh = arrh_original(t, T, a2, b2, c2)
     rlow = alow.k * num_density_unitless
     rhigh = ahigh.k
     xyrat = rlow / rhigh
     blog = log10(xyrat)
     fexp = 1.0 / (1.0 + (blog * blog))
+    air_volume = R*T/P # unit in cm^3/mol
+    c = A / air_volume * k_original_unit * ppb_unit # Conversion factor to translate the unitless second reaction rate value, which is actually in cm³·molec⁻¹·s⁻¹, to ppb⁻¹·s⁻¹.
     @variables k(t) [unit = u"(s*ppb)^-1"]
     ODESystem(
-        [k ~ rlow * (fv^fexp) / (1.0 + xyrat)],
+        [k ~ rlow * (fv^fexp) / (1.0 + xyrat)*c],
         t,
         [k],
         [];
@@ -124,18 +150,22 @@ function rate_2HO2(t, T, P, H2O, a0, c0, a1, c1; name = :rate_HO2HO2)
             description="multiply by num_density to obtain the unitless value of num_density"
         ],
         ppb_inv=1,
-        [unit=u"ppb^-1"],)
+        [unit=u"ppb^-1"],
+        k_original_unit=1,
+        [unit=u"cm^3/molec/s"])
     num_density_unitless = A*P/(R*T)*num_density_unit_inv
     H2O_ppb_molec_cm3 = H2O*ppb_inv*1e-9*num_density_unitless # convert value of H2O concentration in unit of ppb to unit of molec/cm3, but here is unitless
-    @named k0 = arrh(t, T, P, a0, 0.0, c0)
-    @named k1 = arrh(t, T, P, a1, 0.0, c1)
+    @named k0 = arrh_original(t, T, a0, 0.0, c0)
+    @named k1 = arrh_original(t, T, a1, 0.0, c1)
 
     @variables k(t) [unit = u"(s*ppb)^-1"]
+    air_volume = R*T/P # unit in cm^3/mol
+    c = A / air_volume * k_original_unit * ppb_unit # Conversion factor to translate the unitless second reaction rate value, which is actually in cm³·molec⁻¹·s⁻¹, to ppb⁻¹·s⁻¹.
     ODESystem(
         [
             k ~
             (k0.k + k1.k * num_density_unitless) *
-            (1.0 + 1.4e-21 * H2O * H2O_ppb_molec_cm3 * exp(T_0 / T)),
+            (1.0 + 1.4e-21 * H2O * H2O_ppb_molec_cm3 * exp(T_0 / T)) * c,
         ],
         t,
         [k],
@@ -164,23 +194,27 @@ function rate_OH_CO(t, T, P; name = :rate_OHCO)
             description="multiply by num_density to obtain the unitless value of num_density"
         ],
         ppb_inv=1,
-        [unit=u"ppb^-1"],)
+        [unit=u"ppb^-1"],
+        k_original_unit=1,
+        [unit=u"cm^3/molec/s"])
     num_density_unitless = A*P/(R*T)*num_density_unit_inv
-    @named klo1 = arrh(t, T, P, 5.9e-33, 1, 0)
-    @named khi1 = arrh(t, T, P, 1.1e-12, -1.3, 0)
+    @named klo1 = arrh_original(t, T, 5.9e-33, 1, 0)
+    @named khi1 = arrh_original(t, T, 1.1e-12, -1.3, 0)
     xyrat1 = klo1.k * num_density_unitless / khi1.k
     blog1 = log10(xyrat1)
     fexp1 = 1.0 / (1.0 + blog1 * blog1)
     kco1 = klo1.k * num_density_unitless * 0.6^fexp1 / (1.0 + xyrat1)
-    @named klo2 = arrh(t, T, P, 1.5e-13, 0, 0)
-    @named khi2 = arrh(t, T, P, 2.1e9, -6.1, 0)
+    @named klo2 = arrh_original(t, T, 1.5e-13, 0, 0)
+    @named khi2 = arrh_original(t, T, 2.1e9, -6.1, 0)
     xyrat2 = klo2.k * num_density_unitless / khi2.k
     blog2 = log10(xyrat2)
     fexp2 = 1.0 / (1.0 + blog2 * blog2)
     kco2 = klo2.k * 0.6^fexp2 / (1.0 + xyrat2)
     @variables k(t) [unit = u"(s*ppb)^-1"]
+    air_volume = R*T/P # unit in cm^3/mol
+    c = A / air_volume * k_original_unit * ppb_unit # Conversion factor to translate the unitless second reaction rate value, which is actually in cm³·molec⁻¹·s⁻¹, to ppb⁻¹·s⁻¹.
     ODESystem(
-        [k ~ kco1 + kco2],
+        [k ~ (kco1 + kco2) * c],
         t,
         [k],
         [];
