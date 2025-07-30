@@ -1,3 +1,5 @@
+BSON.@load joinpath(@__DIR__, "O3_profile_offline.bson") O3_profile_offline
+
 # Hybrid grid parameters from https://wiki.seas.harvard.edu/geos-chem/index.php/GEOS-Chem_vertical_grids
 const Ap = SVector{73}(
     [
@@ -413,10 +415,90 @@ const σ_O2_interp = create_fjx_interp(
     ]
 )
 
-function OD_abs(T, N)
+# Cross sections σ for O3 for different wavelengths(18 bins), temperatures
+const σ_O3_interp = create_fjx_interp(
+    [218.0f0, 258.0f0, 298.0f0],
+    [
+        SA_F32[
+            5.988,
+            4.859,
+            4.307,
+            3.654,
+            3.410,
+            4.849,
+            6.534,
+            9.320,
+            8.757 * 10,
+            3.513 * 10,
+            1.508 * 10,
+            7.925,
+            2.456,
+            8.904 * 0.1,
+            3.661 * 0.1,
+            4.539 * 0.01,
+            6.167 * 0.0001,
+            1.666 * 0.01,
+        ] * 10.0f0^-19.0f0,
+        SA_F32[
+            5.989, 
+            4.862, 
+            4.314, 
+            3.666, 
+            3.421, 
+            4.845,
+            6.519, 
+            9.299, 
+            8.826 * 10, 
+            3.566 * 10, 
+            1.547 * 10, 
+            8.260,
+            2.617, 
+            9.739 * 0.1, 
+            4.139 * 0.1, 
+            5.515 * 0.01, 
+            6.167 * 0.0001, 
+            1.666 * 0.01,
+        ] * 10.0f0^-19.0f0,
+        SA_F32[
+            5.990, 
+            4.866, 
+            4.320, 
+            3.678, 
+            3.432, 
+            4.840, 
+            6.504, 
+            9.278, 
+            8.896 * 10, 
+            3.618 * 10, 
+            1.586 * 10, 
+            8.595,
+            2.778, 
+            1.058, 
+            4.617 * 0.1, 
+            6.493 * 0.01, 
+            6.167 * 0.0001, 
+            1.666 * 0.01,
+        ] * 10.0f0^-19.0f0
+    ]
+)
+
+# latitude array for offline O3 profile, Data from https://ftp.as.harvard.edu/gcgrid/data/ExtData/CHEM_INPUTS/FastJ_201204/
+const lat_array = [-85.0, -75.0, -65.0, -55.0, -45.0, -35.0, -25.0, -15.0, -5.0, 5.0, 15.0, 25.0, 35.0, 45.0, 55.0, 65.0, 75.0, 85.0]
+
+# # Get 73-layer ozone profile at a given lat + month
+# function get_o3_profile(o3::Array{Float64,3}, target_lat::Real, month::Int)
+#     @inbounds lat_idx = findmin(abs.(lat_array .- target_lat))[2]
+#     @inbounds return view(o3, :, lat_idx, month)  # returns a 73-element SubArray
+# end
+
+function OD_abs(T, N, ozone_profile)
     XQO2 = [σ_O2_interp[i](T) for i in 1:18]
-    OD_O2 = XQO2 * N * 0.20948
-    OD_abs = OD_O2 # TODO not included O3 absorption optical depth right now
+    XQO3 = [σ_O3_interp[i](T) for i in 1:18]
+    OD_O2 = XQO2 * N * 0.20948 # O2 absoption optical depth
+    ut = Dates.unix2datetime(t)
+    month_value = month(ut)
+    OD_O3 = XQO3 * N * ozone_profile # O3 absoption optical depth
+    OD_abs = OD_O2 + OD_O3
     return OD_abs
 end
 
@@ -443,12 +525,17 @@ const z_profile = SVector{74}(ZHL(P_levels, T_profile))
 
 # calculate optical depth
 const OD_ray_profile = hcat(Rayleigh_OD.(N_profile)...) # Rayleigh OD in each layer
-const OD_abs_profile = SMatrix{18, 73}(hcat(OD_abs.(T_profile_top, N_profile)...)) # O2 absorption OD in each layer
-const OD_total = SMatrix{74, 18}(
-    vcat((OD_abs_profile + OD_ray_profile)', zeros(1, 18)),
-# Build the extended optical depth grid by appending a zero row (top-of-atmosphere).
-)
-# TODO: add O3 absorption OD & aerosols and cloud OD
+OD_total_lookup = Array{SMatrix{74, 18, Float64}, 2}(undef, 18, 12)
+for i in 1:12
+    for j in 1:18
+        OD_abs_profile = SMatrix{18, 73}(hcat(OD_abs.(T_profile_top, N_profile, O3_profile_offline[:, j, i])...))
+        OD_total_lookup[j, i] = SMatrix{74, 18}(
+            vcat((OD_abs_profile + OD_ray_profile)', zeros(1, 18)),
+        # Build the extended optical depth grid by appending a zero row (top-of-atmosphere).
+        )
+    end
+end
+# TODO: add aerosols and cloud OD
 
 # Convert CTM heights to absolute radii
 function calcRZ(ZHL, i)
