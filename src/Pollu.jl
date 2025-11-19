@@ -118,6 +118,8 @@ function Pollu(; name = :Pollu, rxn_sys = false)
             [unit=u"ppb"],
             N2O5(t)=4e-6,
             [unit=u"ppb"],
+            ALDX(t)=1e-11,
+            [unit=u"ppb", description="lumped C3+ aldehydes"],
             )
 
         #Gas-phase reactions
@@ -125,6 +127,7 @@ function Pollu(; name = :Pollu, rxn_sys = false)
         k3, HO2 + NO --> NO2 + OH
         k6, CH2O + OH --> HO2 + CO
         k8, ALD + OH --> C2O3
+        k8, ALDX + OH --> C2O3
         k9, C2O3 + NO --> NO2 + MEO2 + CO2
         k10, C2O3 + NO2 --> PAN
         k12, MEO2 + NO --> CH3O + NO2
@@ -142,6 +145,7 @@ function Pollu(; name = :Pollu, rxn_sys = false)
         jH2COa, CH2O --> 2HO2 + CO
         jH2COb, CH2O --> CO
         jALD, ALD --> MEO2 + HO2 + CO
+        jALD, ALDX --> MEO2 + HO2 + CO
         jPAN, PAN --> C2O3 + NO2
         jO3_O1D, O3 --> O1D
         jO3_O3P, O3 --> O3P
