@@ -158,3 +158,214 @@ end
 function FastJX_interpolation_troposphere(t_ref::DateTime; kwargs...)
     return FastJX_interpolation_troposphere(datetime2unix(t_ref); kwargs...)
 end
+
+export FastJX_interpolation
+
+"""
+    FastJX_interpolation(t_ref; name=:FastJX, domaininfo=nothing)
+
+Full-mechanism Fast-JX photolysis using **interpolated** actinic fluxes.
+
+This constructor exposes the complete set of photolysis rate constants (the same
+`j_*` species as [`FastJX`](@ref)), so it couples to the full GEOS-Chem
+gas-phase mechanism (`GEOSChemGasPhase`) in addition to `SuperFast` and `Pollu`.
+
+Unlike [`FastJX`](@ref) -- which evaluates the direct-beam radiative-transfer
+integral on every call -- the 18-band actinic fluxes here are read from a
+precomputed lookup table interpolated in pressure and the cosine of the solar
+zenith angle (`flux_eqs_interpolation`). The temperature-dependent cross
+sections and quantum yields are applied identically to [`FastJX`](@ref), so the
+only approximation relative to the online scheme is the flux interpolation. This
+trades accuracy at the table edges for a much cheaper right-hand-side evaluation,
+which is useful when Fast-JX is embedded in a chemical transport model.
+
+The shipped flux table spans a tropospheric pressure range (about 10-1000 hPa);
+above the table top the flux is held constant (`Flat()` extrapolation), so this
+constructor targets tropospheric / lower-stratospheric columns. For the reduced
+(SuperFast-only) photolysis set, see [`FastJX_interpolation_troposphere`](@ref).
+
+`t_ref` is the reference time (`DateTime` or Unix seconds). Passing a
+`DomainInfo` attaches it as `SysDomainInfo` metadata, mirroring [`FastJX`](@ref).
+
+# Example
+
+```julia
+fj = FastJX_interpolation(DateTime(2000, 1, 1))
+```
+"""
+function FastJX_interpolation(t_ref::AbstractFloat; name = :FastJX, domaininfo = nothing)
+    consts = @constants begin
+        T_unit = 1.0, [unit = u"K", description = "Unit temperature (for unit conversion)"]
+        P_unit = 1.0, [unit = u"Pa", description = "Unit pressure"]
+    end
+    params = @parameters begin
+        T = 298.0, [unit = u"K", description = "Temperature"]
+        lat = 40.0, [description = "Latitude (Degrees)"]
+        long = -97.0, [description = "Longitude (Degrees)"]
+        P = 101325, [unit = u"Pa", description = "Pressure"]
+        H2O = 450, [unit = u"ppb"]
+        t_ref = t_ref, [unit = u"s", description = "Reference Unix time"]
+    end
+
+    vars = @variables begin
+        cosSZA(t), [description = "Cosine of the solar zenith angle"]
+
+        j_o32OH(t), [unit = u"s^-1"]
+        j_NO2(t), [unit = u"s^-1"]
+        j_HOCl(t), [unit = u"s^-1"]
+        j_H2COb(t), [unit = u"s^-1"]
+        j_MeAcr(t), [unit = u"s^-1"]
+        j_N2O5(t), [unit = u"s^-1"]
+        j_H1301(t), [unit = u"s^-1"]
+        j_CFCl3(t), [unit = u"s^-1"]
+        j_NO(t), [unit = u"s^-1"]
+        j_Glyxlc(t), [unit = u"s^-1"]
+        j_F114(t), [unit = u"s^-1"]
+        j_CH3NO3(t), [unit = u"s^-1"]
+        j_CHBr3(t), [unit = u"s^-1"]
+        j_F123(t), [unit = u"s^-1"]
+        j_CHF2Cl(t), [unit = u"s^-1"]
+        j_OClO(t), [unit = u"s^-1"]
+        j_H1211(t), [unit = u"s^-1"]
+        j_BrO(t), [unit = u"s^-1"]
+        j_CH3Cl(t), [unit = u"s^-1"]
+        j_MEKeto(t), [unit = u"s^-1"]
+        j_PAN(t), [unit = u"s^-1"]
+        j_H2402(t), [unit = u"s^-1"]
+        j_PrAld(t), [unit = u"s^-1"]
+        j_MeVKa(t), [unit = u"s^-1"]
+        j_MeVKb(t), [unit = u"s^-1"]
+        j_MeVKc(t), [unit = u"s^-1"]
+        j_ClNO3b(t), [unit = u"s^-1"]
+        j_F113(t), [unit = u"s^-1"]
+        j_HNO4(t), [unit = u"s^-1"]
+        j_ClO(t), [unit = u"s^-1"]
+        j_H2O2(t), [unit = u"s^-1"]
+        j_CH2Br2(t), [unit = u"s^-1"]
+        j_OCS(t), [unit = u"s^-1"]
+        j_F142b(t), [unit = u"s^-1"]
+        j_F115(t), [unit = u"s^-1"]
+        j_O31D(t), [unit = u"s^-1"]
+        j_CF3I(t), [unit = u"s^-1"]
+        j_Glyxla(t), [unit = u"s^-1"]
+        j_CCl4(t), [unit = u"s^-1"]
+        j_Cl2(t), [unit = u"s^-1"]
+        j_CH3I(t), [unit = u"s^-1"]
+        j_HNO2(t), [unit = u"s^-1"]
+        j_Aceta(t), [unit = u"s^-1"]
+        j_N2O(t), [unit = u"s^-1"]
+        j_MeCCl3(t), [unit = u"s^-1"]
+        j_Cl2O2(t), [unit = u"s^-1"]
+        j_CH3Br(t), [unit = u"s^-1"]
+        j_HNO3(t), [unit = u"s^-1"]
+        j_CF2Cl2(t), [unit = u"s^-1"]
+        j_Glyxlb(t), [unit = u"s^-1"]
+        j_F141b(t), [unit = u"s^-1"]
+        j_O3(t), [unit = u"s^-1"]
+        j_ClNO3a(t), [unit = u"s^-1"]
+        j_ActAld(t), [unit = u"s^-1"]
+        j_CH2Cl2(t), [unit = u"s^-1"]
+        j_O2(t), [unit = u"s^-1"]
+        j_BrNO3(t), [unit = u"s^-1"]
+        j_CH3OOH(t), [unit = u"s^-1"]
+        j_GlyAld(t), [unit = u"s^-1"]
+        j_H2COa(t), [unit = u"s^-1"]
+        j_MGlyxl(t), [unit = u"s^-1"]
+        j_HOBr(t), [unit = u"s^-1"]
+        j_NO3a(t), [unit = u"s^-1"]
+        j_NO3b(t), [unit = u"s^-1"]
+        j_Acetb(t), [unit = u"s^-1"]
+        j_BrCl(t), [unit = u"s^-1"]
+    end
+
+    # Actinic fluxes from the precomputed (pressure, cosSZA) interpolation table
+    # instead of the online direct-beam radiative-transfer calculation used by `FastJX`.
+    flux_vars, fluxeqs, c_flux = flux_eqs_interpolation(cosSZA, P / P_unit)
+    j_o31D_adj = adjust_j_o31D(ParentScope(T), ParentScope(P), ParentScope(H2O))
+
+    eqs = [
+        cosSZA ~ cos_solar_zenith_angle(t + t_ref, lat, long);
+        fluxeqs;
+        j_o32OH ~ j_O31D * j_o31D_adj.j_O31D_adj;
+        j_CH3OOH ~ j_mean_CH3OOH(T / T_unit, flux_vars);
+        j_NO2 ~ j_mean_NO2(T / T_unit, flux_vars);
+        j_HOCl ~ j_mean_HOCl(T / T_unit, flux_vars);
+        j_H2COb ~ j_mean_H2COb(T / T_unit, flux_vars);
+        j_MeAcr ~ j_mean_MeAcr(T / T_unit, flux_vars);
+        j_N2O5 ~ j_mean_N2O5(T / T_unit, flux_vars);
+        j_H1301 ~ j_mean_H1301(T / T_unit, flux_vars);
+        j_CFCl3 ~ j_mean_CFCl3(T / T_unit, flux_vars);
+        j_NO ~ j_mean_NO(T / T_unit, flux_vars);
+        j_Glyxlc ~ j_mean_Glyxlc(T / T_unit, flux_vars);
+        j_F114 ~ j_mean_F114(T / T_unit, flux_vars);
+        j_CH3NO3 ~ j_mean_CH3NO3(T / T_unit, flux_vars);
+        j_CHBr3 ~ j_mean_CHBr3(T / T_unit, flux_vars);
+        j_F123 ~ j_mean_F123(T / T_unit, flux_vars);
+        j_CHF2Cl ~ j_mean_CHF2Cl(T / T_unit, flux_vars);
+        j_OClO ~ j_mean_OClO(T / T_unit, flux_vars);
+        j_H1211 ~ j_mean_H1211(T / T_unit, flux_vars);
+        j_BrO ~ j_mean_BrO(T / T_unit, flux_vars);
+        j_CH3Cl ~ j_mean_CH3Cl(T / T_unit, flux_vars);
+        j_MEKeto ~ j_mean_MEKeto(T / T_unit, flux_vars);
+        j_PAN ~ j_mean_PAN(T / T_unit, flux_vars);
+        j_H2402 ~ j_mean_H2402(T / T_unit, flux_vars);
+        j_PrAld ~ j_mean_PrAld(T / T_unit, flux_vars);
+        j_MeVKa ~ j_mean_MeVKa(T / T_unit, flux_vars);
+        j_MeVKb ~ j_mean_MeVKb(T / T_unit, flux_vars);
+        j_MeVKc ~ j_mean_MeVKc(T / T_unit, flux_vars);
+        j_ClNO3b ~ j_mean_ClNO3b(T / T_unit, flux_vars);
+        j_F113 ~ j_mean_F113(T / T_unit, flux_vars);
+        j_HNO4 ~ j_mean_HNO4(T / T_unit, flux_vars);
+        j_ClO ~ j_mean_ClO(T / T_unit, flux_vars);
+        j_H2O2 ~ j_mean_H2O2(T / T_unit, flux_vars);
+        j_CH2Br2 ~ j_mean_CH2Br2(T / T_unit, flux_vars);
+        j_OCS ~ j_mean_OCS(T / T_unit, flux_vars);
+        j_F142b ~ j_mean_F142b(T / T_unit, flux_vars);
+        j_F115 ~ j_mean_F115(T / T_unit, flux_vars);
+        j_O31D ~ j_mean_O31D(T / T_unit, flux_vars);
+        j_CF3I ~ j_mean_CF3I(T / T_unit, flux_vars);
+        j_Glyxla ~ j_mean_Glyxla(T / T_unit, flux_vars);
+        j_CCl4 ~ j_mean_CCl4(T / T_unit, flux_vars);
+        j_Cl2 ~ j_mean_Cl2(T / T_unit, flux_vars);
+        j_CH3I ~ j_mean_CH3I(T / T_unit, flux_vars);
+        j_HNO2 ~ j_mean_HNO2(T / T_unit, flux_vars);
+        j_Aceta ~ j_mean_Aceta(T / T_unit, flux_vars);
+        j_MeCCl3 ~ j_mean_MeCCl3(T / T_unit, flux_vars);
+        j_Cl2O2 ~ j_mean_Cl2O2(T / T_unit, flux_vars);
+        j_CH3Br ~ j_mean_CH3Br(T / T_unit, flux_vars);
+        j_HNO3 ~ j_mean_HNO3(T / T_unit, flux_vars);
+        j_CF2Cl2 ~ j_mean_CF2Cl2(T / T_unit, flux_vars);
+        j_Glyxlb ~ j_mean_Glyxlb(T / T_unit, flux_vars);
+        j_F141b ~ j_mean_F141b(T / T_unit, flux_vars);
+        j_O3 ~ j_mean_O3(T / T_unit, flux_vars);
+        j_ClNO3a ~ j_mean_ClNO3a(T / T_unit, flux_vars);
+        j_ActAld ~ j_mean_ActAld(T / T_unit, flux_vars);
+        j_CH2Cl2 ~ j_mean_CH2Cl2(T / T_unit, flux_vars);
+        j_O2 ~ j_mean_O2(T / T_unit, flux_vars);
+        j_BrNO3 ~ j_mean_BrNO3(T / T_unit, flux_vars);
+        j_GlyAld ~ j_mean_GlyAld(T / T_unit, flux_vars);
+        j_H2COa ~ j_mean_H2COa(T / T_unit, flux_vars);
+        j_MGlyxl ~ j_mean_MGlyxl(T / T_unit, flux_vars);
+        j_HOBr ~ j_mean_HOBr(T / T_unit, flux_vars);
+        j_NO3a ~ j_mean_NO3a(T / T_unit, flux_vars);
+        j_NO3b ~ j_mean_NO3b(T / T_unit, flux_vars);
+        j_Acetb ~ j_mean_Acetb(T / T_unit, flux_vars);
+        j_BrCl ~ j_mean_BrCl(T / T_unit, flux_vars)
+    ]
+
+    fjx = System(
+        eqs,
+        t,
+        [vars; flux_vars],
+        [params; consts; c_flux];
+        name = name,
+        metadata = isnothing(domaininfo) ? Dict(CoupleType => FastJXCoupler) :
+                   Dict(CoupleType => FastJXCoupler, SysDomainInfo => domaininfo),
+        systems = [j_o31D_adj]
+    )
+    return flatten(fjx) # Need to do flatten because otherwise coupling doesn't work correctly
+end
+function FastJX_interpolation(t_ref::DateTime; kwargs...)
+    return FastJX_interpolation(datetime2unix(t_ref); kwargs...)
+end
+FastJX_interpolation(domain::DomainInfo; kwargs...) = FastJX_interpolation(get_tref(domain); domaininfo = domain, kwargs...)

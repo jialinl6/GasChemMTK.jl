@@ -176,6 +176,11 @@ end
     @test_nowarn mtkcompile(GasChem.FastJX(0.0))
 end
 
+@testitem "FastJX_interpolation Initialization" begin
+    using GasChem, ModelingToolkit
+    @test_nowarn mtkcompile(GasChem.FastJX_interpolation(0.0))
+end
+
 @testitem "Direct Flux" begin
     using GasChem
     @test GasChem.calc_direct_fluxes(0.42255961917649837, 1013525) ≈ [
