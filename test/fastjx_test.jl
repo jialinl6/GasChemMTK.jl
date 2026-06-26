@@ -181,6 +181,20 @@ end
     @test_nowarn mtkcompile(GasChem.FastJX_interpolation(0.0))
 end
 
+@testitem "FastJX_interpolation DomainInfo Initialization" begin
+    using Dates, EarthSciMLBase, GasChem, ModelingToolkit
+
+    domain = DomainInfo(
+        DateTime(2016, 5, 1),
+        DateTime(2016, 5, 2);
+        lonrange = deg2rad(-180.0f0):deg2rad(2.5):deg2rad(175.0f0),
+        latrange = deg2rad(-85.0f0):deg2rad(2):deg2rad(85.0f0),
+        levrange = 1:10
+    )
+
+    @test_nowarn mtkcompile(GasChem.FastJX_interpolation(domain))
+end
+
 @testitem "Direct Flux" begin
     using GasChem
     @test GasChem.calc_direct_fluxes(0.42255961917649837, 1013525) ≈ [

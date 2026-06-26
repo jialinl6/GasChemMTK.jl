@@ -162,7 +162,7 @@ end
 export FastJX_interpolation
 
 """
-    FastJX_interpolation(t_ref; name=:FastJX, domaininfo=nothing)
+    FastJX_interpolation(t_ref; name=:FastJX)
 
 Full-mechanism Fast-JX photolysis using **interpolated** actinic fluxes.
 
@@ -185,7 +185,7 @@ constructor targets tropospheric / lower-stratospheric columns. For the reduced
 (SuperFast-only) photolysis set, see [`FastJX_interpolation_troposphere`](@ref).
 
 `t_ref` is the reference time (`DateTime` or Unix seconds). Passing a
-`DomainInfo` attaches it as `SysDomainInfo` metadata, mirroring [`FastJX`](@ref).
+`DomainInfo` uses its reference time, mirroring [`FastJX`](@ref).
 
 # Example
 
@@ -193,7 +193,7 @@ constructor targets tropospheric / lower-stratospheric columns. For the reduced
 fj = FastJX_interpolation(DateTime(2000, 1, 1))
 ```
 """
-function FastJX_interpolation(t_ref::AbstractFloat; name = :FastJX, domaininfo = nothing)
+function FastJX_interpolation(t_ref::AbstractFloat; name = :FastJX)
     consts = @constants begin
         T_unit = 1.0, [unit = u"K", description = "Unit temperature (for unit conversion)"]
         P_unit = 1.0, [unit = u"Pa", description = "Unit pressure"]
@@ -359,8 +359,7 @@ function FastJX_interpolation(t_ref::AbstractFloat; name = :FastJX, domaininfo =
         [vars; flux_vars],
         [params; consts; c_flux];
         name = name,
-        metadata = isnothing(domaininfo) ? Dict(CoupleType => FastJXCoupler) :
-                   Dict(CoupleType => FastJXCoupler, SysDomainInfo => domaininfo),
+        metadata = Dict(CoupleType => FastJXCoupler),
         systems = [j_o31D_adj]
     )
     return flatten(fjx) # Need to do flatten because otherwise coupling doesn't work correctly
@@ -368,4 +367,4 @@ end
 function FastJX_interpolation(t_ref::DateTime; kwargs...)
     return FastJX_interpolation(datetime2unix(t_ref); kwargs...)
 end
-FastJX_interpolation(domain::DomainInfo; kwargs...) = FastJX_interpolation(get_tref(domain); domaininfo = domain, kwargs...)
+FastJX_interpolation(domain::DomainInfo; kwargs...) = FastJX_interpolation(get_tref(domain); kwargs...)
