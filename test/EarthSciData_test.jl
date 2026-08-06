@@ -98,3 +98,32 @@ end
     @test occursin(r"GEOSChemGasPhase.*j_11.*~.*FastJX.*j_NO2"i, eqs) ||
         occursin(r"FastJX.*j_NO2.*~.*GEOSChemGasPhase.*j_11"i, eqs)
 end
+
+@testitem "GEOSChemGasPhase met-driven H2O" begin
+    using GasChem, EarthSciData
+    using Dates, ModelingToolkit, EarthSciMLBase
+
+    domain = DomainInfo(
+        DateTime(2016, 5, 1),
+        DateTime(2016, 5, 2);
+        latrange = deg2rad(-85.0f0):deg2rad(2):deg2rad(85.0f0),
+        lonrange = deg2rad(-180.0f0):deg2rad(2.5):deg2rad(175.0f0),
+        levrange = 1:10
+    )
+
+    csys = convert(
+        System,
+        couple(
+            GEOSChemGasPhase(),
+            NEI2016MonthlyEmis("mrggrid_withbeis_withrwc", domain),
+            GEOSFP("4x5", domain),
+            domain
+        )
+    )
+
+    # H2O is a met-driven constant species (parameter -> observed), not a state.
+    us = string.(unknowns(csys))
+    @test !any(u -> u == "H2O(t)" || endswith(u, "₊H2O(t)"), us)
+    obs = string.([e.lhs for e in observed(csys)])
+    @test any(o -> endswith(o, "₊H2O(t)"), obs)
+end
