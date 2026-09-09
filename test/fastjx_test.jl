@@ -254,10 +254,24 @@ end
     @test GasChem.calc_direct_flux(cos_sza, P, 11) ≈ 5.4169480803700356e10
     @test GasChem.calc_direct_flux(cos_sza, P, 13) ≈ 1.697289300309447e14
     @test GasChem.calc_direct_flux(cos_sza, P, 15) ≈ 6.569697111320194e14
-    @test GasChem.calc_direct_flux(cos_sza, P, 18) ≈ 2.0972515867967904e17
+    @test GasChem.calc_direct_flux(cos_sza, P, 18) ≈ 1.461091050513562e17
 
     P = 100
     @test GasChem.calc_direct_flux(cos_sza, P, 3) ≈ 0.0
     @test GasChem.calc_direct_flux(cos_sza, P, 9) ≈ 0.0
-    @test GasChem.calc_direct_flux(cos_sza, P, 18) ≈ 4.908683888514731e16
+    @test GasChem.calc_direct_flux(cos_sza, P, 18) ≈ 3.275164457691825e16
+end
+
+
+@testitem "solar_flux_factor matches GEOS-Chem SOLFX" begin
+    using Dates
+    # SOLF = 1 - 0.034*cos((DOY-172)*2pi/365)  (fast_jx_mod.F90 SOLAR_JX):
+    # minimum at the aphelion-side solstice (DOY 172), maximum near perihelion.
+    t172 = datetime2unix(DateTime(2016, 6, 20, 12))
+    t355 = datetime2unix(DateTime(2016, 12, 20, 12))
+    @test GasChem.solar_flux_factor(t172) ≈ 0.966 atol = 1e-3
+    @test GasChem.solar_flux_factor(t355) ≈ 1.0339 atol = 1e-3
+    # energy-neutral over a full year
+    days = [datetime2unix(DateTime(2016, 1, 1) + Day(d)) for d in 0:364]
+    @test sum(GasChem.solar_flux_factor.(days)) / 365 ≈ 1.0 atol = 2e-3
 end
