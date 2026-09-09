@@ -86,6 +86,12 @@ this directory, then copy to `src/`).
 - The pinned 24-h box-model test solutions (compose_fastjx_superfast_test.jl,
   pollu_test.jl) are insensitive to the table at their rtol=1e-4 and pass
   unchanged.
+- `FastJX` now defaults to the same interpolated scattering fluxes
+  (`fluxes = :interpolated` kwarg; `:direct` keeps the Beer-Lambert beam as a
+  baseline), so `FastJX` and `FastJX_interpolation_troposphere` agree to
+  machine precision on every shared J. Scattering in an online box model is
+  possible precisely because the fixed column makes the scattered flux a pure
+  function of (P, cosSZA) - the table is that function, memoized.
 
 ## Validation plan
 

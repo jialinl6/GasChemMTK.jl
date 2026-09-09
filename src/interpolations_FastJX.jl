@@ -84,6 +84,19 @@ function flux_eqs_interpolation(csa, P, solf)
     return flux_vars, (flux_vars .~ collect(flux_vals) .* c_flux .* solf), c_flux # TODO(CT): remove "collect" when https://github.com/SciML/ModelingToolkit.jl/issues/3888 is fixed.
 end
 
+# System-form of the interpolated fluxes: drop-in replacement for `flux_sys`
+# (same subsystem name and F_* variable names), used by `FastJX` when
+# `fluxes = :interpolated`. The table carries the full clear-sky radiative
+# transfer (Rayleigh multiple scattering + O2/O3 absorption + surface albedo)
+# precomputed by scripts/scattering/precompute_table.jl; for the fixed
+# climatological column the scattered flux is a pure function of
+# (P, cosSZA), which is what makes an online box model able to include
+# scattering at all. Valid 10-1000 hPa (held flat outside the table).
+function flux_sys_interpolated(csa, P, solf)
+    flux_vars, fluxeqs, c_flux = flux_eqs_interpolation(csa, P, solf)
+    return System(fluxeqs, t, flux_vars, [c_flux], name = :ActinicFlux)
+end
+
 """
 Description: This is a box model used to calculate the photolysis reaction rate constant using the Fast-JX scheme
 (Neu, J. L., Prather, M. J., and Penner, J. E. (2007), Global atmospheric chemistry: Integrating over fractional cloud cover, J. Geophys. Res., 112, D11306, doi:10.1029/2006JD008007.)
