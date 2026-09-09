@@ -138,8 +138,14 @@ function flux_sys_scattering(csa, P, solf)
 end
 
 """
-Description: This is a box model used to calculate the photolysis reaction rate constant using the Fast-JX scheme
-(Neu, J. L., Prather, M. J., and Penner, J. E. (2007), Global atmospheric chemistry: Integrating over fractional cloud cover, J. Geophys. Res., 112, D11306, doi:10.1029/2006JD008007.)
+Fast-JX photolysis (Neu et al. 2007, doi:10.1029/2006JD008007) for the
+`SuperFast`/`Pollu` species set, with all 18-band actinic fluxes read from
+the precomputed (pressure, cosSZA) lookup table - the offline precompute of
+the online [`FastJX`](@ref) calculation (direct beam + clear-sky diffuse
+scattering; see scripts/scattering/). No radiation is computed at runtime,
+which makes the right-hand side cheap for 3D simulations; the two
+constructors agree up to interpolation error of the direct-beam part.
+Table range: ~10-1000 hPa, cosSZA -0.2..1.0 (held flat outside).
 
 Argument:
 
@@ -147,10 +153,8 @@ Argument:
 
 # Example
 
-Build Fast-JX model:
-
 ```julia
-fj = FastJX(DateTime(2000, 1, 1))
+fj = FastJX_interpolation_troposphere(DateTime(2000, 1, 1))
 ```
 """
 function FastJX_interpolation_troposphere(t_ref::AbstractFloat; name = :FastJX)
@@ -228,14 +232,17 @@ This constructor exposes the complete set of photolysis rate constants (the same
 `j_*` species as [`FastJX`](@ref)), so it couples to the full GEOS-Chem
 gas-phase mechanism (`GEOSChemGasPhase`) in addition to `SuperFast` and `Pollu`.
 
-Unlike [`FastJX`](@ref) -- which evaluates the direct-beam radiative-transfer
-integral on every call -- the 18-band actinic fluxes here are read from a
-precomputed lookup table interpolated in pressure and the cosine of the solar
-zenith angle (`flux_eqs_interpolation`). The temperature-dependent cross
-sections and quantum yields are applied identically to [`FastJX`](@ref), so the
-only approximation relative to the online scheme is the flux interpolation. This
-trades accuracy at the table edges for a much cheaper right-hand-side evaluation,
-which is useful when Fast-JX is embedded in a chemical transport model.
+Unlike [`FastJX`](@ref) -- which computes its direct beam online per
+evaluation and adds the precomputed diffuse-scattering field -- the 18-band
+actinic fluxes here are read entirely from a precomputed lookup table
+interpolated in pressure and the cosine of the solar zenith angle
+(`flux_eqs_interpolation`). That table is the offline precompute of the
+online [`FastJX`](@ref) calculation (direct beam + diffuse at each grid
+node), so the two agree up to interpolation error of the direct part. The
+temperature-dependent cross sections and quantum yields are applied
+identically to [`FastJX`](@ref). This trades accuracy at the table edges for
+a much cheaper right-hand-side evaluation, which is useful when Fast-JX is
+embedded in a chemical transport model.
 
 The shipped flux table spans a tropospheric pressure range (about 10-1000 hPa);
 above the table top the flux is held constant (`Flat()` extrapolation), so this
@@ -336,8 +343,8 @@ function FastJX_interpolation(t_ref::AbstractFloat; name = :FastJX)
         j_BrCl(t), [unit = u"s^-1"]
     end
 
-    # Actinic fluxes from the precomputed (pressure, cosSZA) interpolation table
-    # instead of the online direct-beam radiative-transfer calculation used by `FastJX`.
+    # Actinic fluxes from the precomputed (pressure, cosSZA) interpolation table:
+    # the offline precompute of the online `FastJX` (direct beam + diffuse field).
     flux_vars, fluxeqs, c_flux = flux_eqs_interpolation(cosSZA, P / P_unit, solar_flux_factor(t + t_ref))
     j_o31D_adj = adjust_j_o31D(ParentScope(T), ParentScope(P), ParentScope(H2O))
 
