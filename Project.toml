@@ -40,7 +40,7 @@ TestItemRunner = "1.1.0"
 julia = "1.10"
 
 [sources]
-Catalyst = {url = "https://github.com/SciML/Catalyst.jl.git", rev = "master"}
+Catalyst = {url = "https://github.com/SciML/Catalyst.jl.git", rev = "bd21d5ffac7b9b029c21db0b82daed8d89ca10cf"}
 
 [extras]
 AllocCheck = "9b6a8646-10ed-4001-bbdc-1d2f46dfbb1a"
