@@ -251,16 +251,23 @@ const ND_CLR = 2 * NLAY + 1          # 147
 # Edge 1 = surface .. edge 74 = TOA. Reuses the package's fine-grid air-mass
 # machinery so the direct beam is identical to calc_direct_flux.
 function solar_beam_edges(u0, band)
-    ftau = zeros(NEDGE)
-    dtau = view(GasChem.OD_total, :, band)  # 74 rows: layers 1..73 + zero pad
+    return solar_beam_edges_allbands(u0)[:, band]
+end
+
+# All 18 bands at once - the air-mass factors depend only on (u0, edge), so
+# compute each edge's AMF once and reuse across bands.
+function solar_beam_edges_allbands(u0)
+    ftau = zeros(NEDGE, 18)
     zhl = GasChem.z_profile
     ng = 2 * NLAY + 1
     for L in 1:NEDGE
         fine_index = 2L - 1
         amf = GasChem.sphere2J(u0, zhl, fine_index)
-        if amf[fine_index] > 0.0
+        amf[fine_index] > 0.0 || continue
+        for band in 1:18
+            dtau = view(GasChem.OD_total, :, band)
             tau = 0.5 * sum(dtau[div(i + 1, 2)] * amf[i] for i in 1:ng)
-            ftau[L] = tau < 76.0 ? exp(-tau) : 0.0
+            ftau[L, band] = tau < 76.0 ? exp(-tau) : 0.0
         end
     end
     return ftau
@@ -288,9 +295,9 @@ normalized mean actinic flux (direct + diffuse; TOA incident = 1) at layer
 edge L (1 = surface .. 74 = TOA), and `diag` holds (FJTOP, FJBOT, FSBOT).
 Multiply by `GasChem.top_flux[band]` for absolute flux.
 """
-function solve_band(u0, band; albedo = 0.10)
+function solve_band(u0, band; albedo = 0.10, ftau = nothing)
     ND = ND_CLR
-    ftau = solar_beam_edges(u0, band)
+    ftau = ftau === nothing ? solar_beam_edges(u0, band) : ftau
     pomx = pomega_layers(band)
 
     # cumulative column OD (TTAU): 0 at TOA edge, increasing downward

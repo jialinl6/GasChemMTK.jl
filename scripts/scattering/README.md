@@ -65,6 +65,28 @@ POMEGAX(:, L, band) = omega0 * [1, 0, 0.5, 0, 0, 0, 0, 0] (pure Rayleigh).
    `tropospheric_P` x `cosSZA_vals`), write the bson (same keys; add a
    `provenance` entry recording this file's parameter table).
 
+## Status / results
+
+All steps below are DONE; the generated table is installed as
+`src/tropospheric_interpolation_data.bson` (regenerate with
+`julia --project=. scripts/scattering/precompute_table.jl`, output lands in
+this directory, then copy to `src/`).
+
+- `test_solver.jl`: 78/78 - energy conservation (conservative column + mirror
+  surface returns all incident flux, rtol 2%), zero-scattering limit exact,
+  optically-thin limit, twilight finite/non-negative, direct component matches
+  `calc_direct_flux` to 1e-10.
+- vs upstream #240's GC-fitted table (lit tropospheric nodes, median
+  ours/fit): band 17 **1.044**, band 16 1.089, band 15 1.098, band 13 1.157 -
+  a few-15% high, the expected AOD=0 signature (the fit embeds April CONUS
+  aerosol). Band 18 1.25 because #240 deliberately leaves band 18 unenhanced.
+- End-to-end (surface, lat 40, summer noon), interpolated vs direct-beam:
+  J_NO2 **1.053e-2 s^-1 (1.83x)** vs #240's quoted 1.03e-2; J_H2O2 2.72x,
+  J_H2CO 2.6-2.8x, J_CH3OOH 2.49x, o3->2OH 3.04x.
+- The pinned 24-h box-model test solutions (compose_fastjx_superfast_test.jl,
+  pollu_test.jl) are insensitive to the table at their rtol=1e-4 and pass
+  unchanged.
+
 ## Validation plan
 
 - Unit: BLKSLV against analytic two-stream limits; flux conservation
