@@ -84,17 +84,57 @@ function flux_eqs_interpolation(csa, P, solf)
     return flux_vars, (flux_vars .~ collect(flux_vals) .* c_flux .* solf), c_flux # TODO(CT): remove "collect" when https://github.com/SciML/ModelingToolkit.jl/issues/3888 is fixed.
 end
 
-# System-form of the interpolated fluxes: drop-in replacement for `flux_sys`
-# (same subsystem name and F_* variable names), used by `FastJX` when
-# `fluxes = :interpolated`. The table carries the full clear-sky radiative
-# transfer (Rayleigh multiple scattering + O2/O3 absorption + surface albedo)
-# precomputed by scripts/scattering/precompute_table.jl; for the fixed
-# climatological column the scattered flux is a pure function of
-# (P, cosSZA), which is what makes an online box model able to include
-# scattering at all. Valid 10-1000 hPa (held flat outside the table).
-function flux_sys_interpolated(csa, P, solf)
-    flux_vars, fluxeqs, c_flux = flux_eqs_interpolation(csa, P, solf)
-    return System(fluxeqs, t, flux_vars, [c_flux], name = :ActinicFlux)
+# ---- Diffuse-only scattering field, read online by `FastJX` ----------------
+# The DIFFUSE flux (Rayleigh multiple scattering + surface reflection) cannot
+# be computed locally by a box model - it is a whole-column boundary-value
+# problem. For the fixed climatological column it is, however, a pure function
+# of (P, cosSZA), precomputed by the Cloud-J Feautrier solver in
+# scripts/scattering/precompute_table.jl. `FastJX` computes its own direct
+# beam online (calc_direct_flux) and ADDS this field; `FastJX_interpolation*`
+# instead reads the total table above (= calc_direct_flux + this field at the
+# nodes, i.e. the offline precompute of the online FastJX).
+include_dependency("diffuse_flux_data.bson")
+const _diffuse_data = BSON.load(joinpath(@__DIR__, "diffuse_flux_data.bson"))
+const diffuse_interp_const = tuple(
+    [
+        extrapolate(
+            Interpolations.scale(
+                interpolate(_diffuse_data[:Z_all][i], BSpline(Linear()), OnGrid()),
+                _diffuse_data[:tropospheric_P], _diffuse_data[:cosSZA_vals]),
+            Flat())
+            for i in 1:18
+    ]...
+)
+
+for i in 1:18
+    fname = Symbol(:diffuse_interp_, i)
+    @eval begin
+        $fname(P, csa) = diffuse_interp_const[$i](ustrip(P), ustrip(csa))
+        @register_symbolic $fname(P, csa)
+    end
+end
+@eval const diffuse_funcs = tuple($([Symbol(:diffuse_interp_, i) for i in 1:18]...))
+
+# Actinic-flux subsystem for the online `FastJX` (drop-in for `flux_sys`,
+# same subsystem name and F_* variable names): the direct beam is COMPUTED
+# online per evaluation (spherical Beer-Lambert, any pressure), and the
+# precomputed diffuse field is added (valid 10-1000 hPa, held flat outside).
+function flux_sys_scattering(csa, P, solf)
+    @constants c_flux = 1.0 [
+        unit = u"s^-1", description = "Constant actinic flux (for unit conversion)",
+    ]
+    flux_vals = []
+    flux_vars = []
+    for i in 1:18
+        f = calc_direct_flux(csa, P, i) + diffuse_funcs[i](P, csa)
+        wl = WL[i]
+        n1 = Symbol("F_", Int(round(wl)))
+        v1 = @variables $n1(t) [unit = u"s^-1", description = "Actinic flux at $wl nm"]
+        push!(flux_vars, only(v1))
+        push!(flux_vals, f)
+    end
+    eqs = flux_vars .~ collect(flux_vals) .* c_flux .* solf
+    return System(eqs, t, flux_vars, [c_flux], name = :ActinicFlux)
 end
 
 """

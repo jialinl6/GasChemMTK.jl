@@ -86,12 +86,21 @@ this directory, then copy to `src/`).
 - The pinned 24-h box-model test solutions (compose_fastjx_superfast_test.jl,
   pollu_test.jl) are insensitive to the table at their rtol=1e-4 and pass
   unchanged.
-- `FastJX` now defaults to the same interpolated scattering fluxes
-  (`fluxes = :interpolated` kwarg; `:direct` keeps the Beer-Lambert beam as a
-  baseline), so `FastJX` and `FastJX_interpolation_troposphere` agree to
-  machine precision on every shared J. Scattering in an online box model is
-  possible precisely because the fixed column makes the scattered flux a pure
-  function of (P, cosSZA) - the table is that function, memoized.
+- Final architecture (two data files, both written by `precompute_table.jl`):
+  * `src/diffuse_flux_data.bson` - the DIFFUSE-only field 4*FJ. The online
+    `FastJX` (default `fluxes = :scattering`) COMPUTES its direct beam per
+    evaluation (spherical Beer-Lambert, any pressure) and adds this field -
+    computing what a box model can compute, reading only what it cannot
+    (the diffuse flux is a whole-column boundary-value problem, but for the
+    fixed column it is a pure function of (P, cosSZA)). `fluxes = :direct`
+    drops the diffuse term (clear-beam baseline).
+  * `src/tropospheric_interpolation_data.bson` - the TOTAL flux
+    (calc_direct_flux + diffuse at each node), i.e. the offline precompute
+    of the online `FastJX`. Read by `FastJX_interpolation*`, which compute
+    no radiation at all. Verified: `FastJX` vs
+    `FastJX_interpolation_troposphere` agree to ~1e-5 relative on all
+    shared J's - the residual is interpolation error of the direct part,
+    the correct definition of an offline surrogate.
 
 ## Validation plan
 

@@ -1303,13 +1303,15 @@ Argument:
 
   - `t_ref`: Reference time for the model, can be a `DateTime` or a Unix timestamp (in seconds).
   - `fluxes`: actinic-flux source for all 18 bands.
-      * `:interpolated` (default) - precomputed clear-sky radiative transfer
-        (Rayleigh multiple scattering + O2/O3 absorption + surface albedo 0.10,
-        Cloud-J Feautrier solver over the fixed climatological column; see
-        scripts/scattering/). Pure function of (P, cosSZA); valid 10-1000 hPa
-        (held flat outside). Matches `FastJX_interpolation_troposphere`.
+      * `:scattering` (default) - the direct beam is computed online
+        (spherical Beer-Lambert through Rayleigh + O2/O3, any pressure) and
+        the precomputed clear-sky DIFFUSE field is added (Rayleigh multiple
+        scattering + surface albedo 0.10, Cloud-J Feautrier solver over the
+        fixed climatological column; see scripts/scattering/; diffuse field
+        valid 10-1000 hPa, held flat outside). `FastJX_interpolation*` read
+        the offline precompute of exactly this calculation.
       * `:direct` - online Beer-Lambert direct beam only (no diffuse field);
-        clear-beam baseline, valid at any pressure.
+        clear-beam baseline.
 
 # Example
 
@@ -1319,7 +1321,7 @@ Build Fast-JX model:
 fj = FastJX(DateTime(2000, 1, 1))
 ```
 """
-function FastJX(t_ref::AbstractFloat; name = :FastJX, fluxes::Symbol = :interpolated)
+function FastJX(t_ref::AbstractFloat; name = :FastJX, fluxes::Symbol = :scattering)
     consts = @constants begin
         T_unit = 1.0, [unit = u"K", description = "Unit temperature (for unit conversion)"]
         P_unit = 1.0, [unit = u"Pa", description = "Unit pressure"]
@@ -1404,12 +1406,12 @@ function FastJX(t_ref::AbstractFloat; name = :FastJX, fluxes::Symbol = :interpol
         j_BrCl(t), [unit = u"s^-1"]
     end
 
-    flux = if fluxes === :interpolated
-        flux_sys_interpolated(ParentScope(cosSZA), ParentScope(P) / ParentScope(P_unit), solar_flux_factor(t + ParentScope(t_ref)))
+    flux = if fluxes === :scattering
+        flux_sys_scattering(ParentScope(cosSZA), ParentScope(P) / ParentScope(P_unit), solar_flux_factor(t + ParentScope(t_ref)))
     elseif fluxes === :direct
         flux_sys(ParentScope(cosSZA), ParentScope(P) / ParentScope(P_unit), solar_flux_factor(t + ParentScope(t_ref)))
     else
-        throw(ArgumentError("fluxes must be :interpolated or :direct, got $fluxes"))
+        throw(ArgumentError("fluxes must be :scattering or :direct, got $fluxes"))
     end
     flux_vars = fluxvars(flux)
     j_o31D_adj = adjust_j_o31D(ParentScope(T), ParentScope(P), ParentScope(H2O))
