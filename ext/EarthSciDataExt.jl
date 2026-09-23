@@ -23,8 +23,6 @@ function EarthSciMLBase.couple2(
     @constants(
         MW_NO2 = 46.0055e-3,
         [unit = u"kg/mol", description = "NO2 molar mass"],
-        MW_NO = 30.01e-3,
-        [unit = u"kg/mol", description = "NO molar mass"],
         MW_FORM = 30.026e-3,
         [unit = u"kg/mol", description = "Formaldehyde molar mass"],
         #MW_CH4 = 16.0425e-3, [unit = u"kg/mol", description="Methane molar mass"], # CH4 is currently a constant in SuperFast.
@@ -42,12 +40,13 @@ function EarthSciMLBase.couple2(
 
     # Emissions are in units of "kg/kg air/s" and need to be converted to "ppb/s" or "nmol/mol/s".
     uconv = nmolpermol * MW_Air # Conversion factor with MW factored out.
+    # The NEI NO field is NOx-as-NO2 mass, so its divisor is intentionally MW_NO2.
     return operator_compose(
         convert(System, c),
         e,
         Dict(
             c.NO2 => e.NO2 => uconv / MW_NO2,
-            c.NO => e.NO => uconv / MW_NO,
+            c.NO => e.NO => uconv / MW_NO2, # NOx-as-NO2 mass
             c.CH2O => e.FORM => uconv / MW_FORM,
             #c.CH4 => e.CH4 => uconv / MW_CH4, # CH4 is currently a constant in SuperFast.
             c.CO => e.CO => uconv / MW_CO,
@@ -71,8 +70,6 @@ function EarthSciMLBase.couple2(
         [unit = u"kg/mol", description = "Benzene molar mass"],
         MW_NO2 = 46.0055e-3,
         [unit = u"kg/mol", description = "NO2 molar mass"],
-        MW_NO = 30.01e-3,
-        [unit = u"kg/mol", description = "NO molar mass"],
         MW_FORM = 30.026e-3,
         [unit = u"kg/mol", description = "Formaldehyde molar mass"],
         MW_CH4 = 16.0425e-3,
@@ -101,8 +98,6 @@ function EarthSciMLBase.couple2(
         [unit = u"kg/mol", description = "C2H5OH; Ethanol"],
         MW_NAP = 128.174e-3,
         [unit = u"kg/mol", description = "C10H8; Naphthalene"],
-        MW_HNO2 = 47.014e-3,
-        [unit = u"kg/mol", description = "HONO; Nitrous acid"],
         MW_HCl = 36.461e-3,
         [unit = u"kg/mol", description = "HCl; Hydrochloric acid"],
         MW_Cl2 = 70.906e-3,
@@ -133,6 +128,8 @@ function EarthSciMLBase.couple2(
 
     # Emissions are in units of "kg/kg_air/s" and need to be converted to "ppb/s" or "nmol/mol/s".
     uconv = nmolpermol * MW_Air
+    # The NEI NO and HONO fields are NOx-as-NO2 mass, so their divisor is intentionally MW_NO2.
+    #
     # NOTE: the translate table is a VECTOR of pairs, not a Dict. Upstream's Dict literal
     # keyed c.SO2 twice (=> e.SULF and => e.SO2), silently collapsing last-wins -- dropping
     # the e.SO2 gas emission (~98% of NEI sulfur). The Vector form preserves every entry,
@@ -146,7 +143,7 @@ function EarthSciMLBase.couple2(
             c.ALD2 => e.ALD2 => uconv / MW_ALD2,
             c.BENZ => e.BENZ => uconv / MW_BENZ,
             c.NO2 => e.NO2 => uconv / MW_NO2,
-            c.NO => e.NO => uconv / MW_NO,
+            c.NO => e.NO => uconv / MW_NO2,      # NOx-as-NO2 mass
             c.CH2O => e.FORM => uconv / MW_FORM,
             c.CH4 => e.CH4 => uconv / MW_CH4,
             c.CO => e.CO => uconv / MW_CO,
@@ -162,7 +159,7 @@ function EarthSciMLBase.couple2(
             c.MOH => e.MEOH => uconv / MW_MOH,
             c.EOH => e.ETOH => uconv / MW_EOH,
             c.NAP => e.NAPH => uconv / MW_NAP,
-            c.HNO2 => e.HONO => uconv / MW_HNO2,
+            c.HNO2 => e.HONO => uconv / MW_NO2,  # NOx-as-NO2 mass
             c.HCl => e.HCL => uconv / MW_HCl,
             c.Cl2 => e.CL2 => uconv / MW_Cl2,
             c.CO2 => e.CO2_INV => uconv / MW_CO2,
@@ -299,8 +296,6 @@ function EarthSciMLBase.couple2(
     @constants(
         MW_NO2 = 46.0055e-3,
         [unit = u"kg/mol", description = "NO2 molar mass"],
-        MW_NO = 30.01e-3,
-        [unit = u"kg/mol", description = "NO molar mass"],
         MW_FORM = 30.026e-3,
         [unit = u"kg/mol", description = "Formaldehyde molar mass"],
         #MW_CH4 = 16.0425e-3, [unit = u"kg/mol", description="Methane molar mass"], # CH4 is currently a constant in SuperFast.
@@ -320,12 +315,13 @@ function EarthSciMLBase.couple2(
 
     # Emissions are in units of "kg/kg air/s" and need to be converted to "ppb/s" or "nmol/mol/s".
     uconv = nmolpermol * MW_Air # Conversion factor with MW factored out.
+    # The NEI NO field is NOx-as-NO2 mass, so its divisor is intentionally MW_NO2.
     return operator_compose(
         convert(System, c),
         e,
         Dict(
             c.NO2 => e.NO2 => uconv / MW_NO2,
-            c.NO => e.NO => uconv / MW_NO,
+            c.NO => e.NO => uconv / MW_NO2, # NOx-as-NO2 mass
             c.CH2O => e.FORM => uconv / MW_FORM,
             c.CO => e.CO => uconv / MW_CO,
             c.ALD => e.ALD2 => uconv / MW_ALD2,
