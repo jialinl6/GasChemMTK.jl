@@ -176,12 +176,14 @@ end
     @test_nowarn mtkcompile(GasChem.FastJX(0.0))
 end
 
-@testitem "FastJX_interpolation Initialization" begin
+@testitem "FastJX_interpolation_troposphere Initialization" begin
     using GasChem, ModelingToolkit
-    @test_nowarn mtkcompile(GasChem.FastJX_interpolation(0.0))
+    @test_nowarn mtkcompile(GasChem.FastJX_interpolation_troposphere(0.0))                    # mech=:all (default)
+    @test_nowarn mtkcompile(GasChem.FastJX_interpolation_troposphere(0.0; mech = :superfast))
+    @test_throws ArgumentError GasChem.FastJX_interpolation_troposphere(0.0; mech = :nope)
 end
 
-@testitem "FastJX_interpolation DomainInfo Initialization" begin
+@testitem "FastJX_interpolation_troposphere DomainInfo Initialization" begin
     using Dates, EarthSciMLBase, GasChem, ModelingToolkit
 
     domain = DomainInfo(
@@ -192,7 +194,7 @@ end
         levrange = 1:10
     )
 
-    @test_nowarn mtkcompile(GasChem.FastJX_interpolation(domain))
+    @test_nowarn mtkcompile(GasChem.FastJX_interpolation_troposphere(domain))
 end
 
 @testitem "Direct Flux" begin
@@ -269,9 +271,9 @@ end
     # minimum at the aphelion-side solstice (DOY 172), maximum near perihelion.
     t172 = datetime2unix(DateTime(2016, 6, 20, 12))
     t355 = datetime2unix(DateTime(2016, 12, 20, 12))
-    @test GasChem.solar_flux_factor(t172) ≈ 0.966 atol = 1e-3
-    @test GasChem.solar_flux_factor(t355) ≈ 1.0339 atol = 1e-3
+    @test GasChem.solar_flux_factor(t172) ≈ 0.966 atol = 1.0e-3
+    @test GasChem.solar_flux_factor(t355) ≈ 1.0339 atol = 1.0e-3
     # energy-neutral over a full year
     days = [datetime2unix(DateTime(2016, 1, 1) + Day(d)) for d in 0:364]
-    @test sum(GasChem.solar_flux_factor.(days)) / 365 ≈ 1.0 atol = 2e-3
+    @test sum(GasChem.solar_flux_factor.(days)) / 365 ≈ 1.0 atol = 2.0e-3
 end

@@ -28,9 +28,11 @@ using StaticArrays
 const M_ = 4
 const M2_ = 8
 const EMU = SVector{4, Float64}(
-    0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703)
+    0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703
+)
 const WT = SVector{4, Float64}(
-    0.17392742256873, 0.32607257743127, 0.32607257743127, 0.17392742256873)
+    0.17392742256873, 0.32607257743127, 0.32607257743127, 0.17392742256873
+)
 
 # ---- LEGND0: ordinary Legendre polynomials P_0..P_{n-1}(x) -----------------
 function legnd0(x::Float64, n::Int)
@@ -295,7 +297,7 @@ normalized mean actinic flux (direct + diffuse; TOA incident = 1) at layer
 edge L (1 = surface .. 74 = TOA), and `diag` holds (FJTOP, FJBOT, FSBOT).
 Multiply by `GasChem.top_flux[band]` for absolute flux.
 """
-function solve_band(u0, band; albedo = 0.10, ftau = nothing)
+function solve_band(u0, band; albedo = 0.1, ftau = nothing)
     ND = ND_CLR
     ftau = ftau === nothing ? solar_beam_edges(u0, band) : ftau
     pomx = pomega_layers(band)

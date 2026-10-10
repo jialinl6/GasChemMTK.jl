@@ -1321,7 +1321,10 @@ Build Fast-JX model:
 fj = FastJX(DateTime(2000, 1, 1))
 ```
 """
-function FastJX(t_ref::AbstractFloat; name = :FastJX, fluxes::Symbol = :scattering)
+function FastJX(
+        t_ref::AbstractFloat; name = :FastJX, domaininfo = nothing,
+        fluxes::Symbol = :scattering
+    )
     consts = @constants begin
         T_unit = 1.0, [unit = u"K", description = "Unit temperature (for unit conversion)"]
         P_unit = 1.0, [unit = u"Pa", description = "Unit pressure"]
@@ -1491,10 +1494,10 @@ function FastJX(t_ref::AbstractFloat; name = :FastJX, fluxes::Symbol = :scatteri
         vars,
         [params; consts];
         name = name,
-        metadata = Dict(CoupleType => FastJXCoupler),
+        metadata = isnothing(domaininfo) ? Dict(CoupleType => FastJXCoupler) : Dict(CoupleType => FastJXCoupler, SysDomainInfo => domaininfo),
         systems = [flux, j_o31D_adj]
     )
     return flatten(fjx) # Need to do flatten because otherwise coupling doesn't work correctly
 end
 FastJX(t_ref::DateTime; kwargs...) = FastJX(datetime2unix(t_ref); kwargs...)
-FastJX(domain::DomainInfo; kwargs...) = FastJX(get_tref(domain); kwargs...)
+FastJX(domain::DomainInfo; kwargs...) = FastJX(get_tref(domain); domaininfo = domain, kwargs...)

@@ -34,8 +34,8 @@ end
     pom = zeros(M2_, ND)              # w0 = 0: pure absorption
     rfl = fill(0.0, 5)
     FJ, FJTOP, FJBOT, _ = miesct(pom, fz, ztau, fz[end] * u0, rfl, u0, ND)
-    @test maximum(abs.(FJ)) < 1e-12
-    @test abs(FJTOP) < 1e-12
+    @test maximum(abs.(FJ)) < 1.0e-12
+    @test abs(FJTOP) < 1.0e-12
 end
 
 @testset "optically thin limit: J -> direct beam ~ 1" begin
@@ -49,10 +49,10 @@ end
     for band in (11, 12, 15, 17, 18), u0 in (0.9, 0.5, 0.1)
         J, d = solve_band(u0, band)
         @test all(isfinite, J)
-        @test all(J .>= -1e-12)
+        @test all(J .>= -1.0e-12)
         # J can exceed the unattenuated beam (backscatter+albedo) but not wildly
         @test maximum(J) < 3.0
-        @test d.FJTOP >= -1e-12
+        @test d.FJTOP >= -1.0e-12
     end
 end
 
@@ -63,7 +63,7 @@ end
         ftau = solar_beam_edges(u0, band)
         direct = GasChem.calc_direct_flux(u0, GasChem.P_levels[1], band) /
             GasChem.top_flux[band]
-        @test isapprox(ftau[1], direct; rtol = 1e-10)
+        @test isapprox(ftau[1], direct; rtol = 1.0e-10)
     end
 end
 
@@ -71,7 +71,7 @@ end
     for band in (12, 17)
         J, d = solve_band(-0.1, band)
         @test all(isfinite, J)
-        @test all(J .>= -1e-12)
+        @test all(J .>= -1.0e-12)
         @test d.FSBOT == 0.0
     end
 end

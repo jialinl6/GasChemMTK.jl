@@ -187,7 +187,7 @@ end
 
 @testitem "NEI2016 NO and HONO are NOx-as-NO2 mass" begin
     using GasChem, EarthSciData
-    using Dates, ModelingToolkit, EarthSciMLBase, Symbolics
+    using Dates, ModelingToolkit, EarthSciMLBase  # ModelingToolkit re-exports Symbolics
 
     # Molar masses (kg/mol) as used by the coupling.
     MW_NO2 = 46.0055e-3

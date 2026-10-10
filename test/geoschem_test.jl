@@ -55,14 +55,8 @@ end
     u_2 = 1.6170403327464555e-7
 
     @unpack O3, OH = sys
-    o1 = solve(
-        ODEProblem(sys, [O3 => 20, OH => 4.0e-6], tspan), Rosenbrock23(),
-        abstol = 1.0e-10, reltol = 1.0e-10
-    )
-    o2 = solve(
-        ODEProblem(sys, [O3 => 20, OH => 4.0e-6 * 1.5], tspan), Rosenbrock23(),
-        abstol = 1.0e-10, reltol = 1.0e-10
-    )
+    o1 = solve(ODEProblem(sys, [O3 => 20, OH => 4.0e-6], tspan), Rosenbrock23(), abstol = 1.0e-10, reltol = 1.0e-10)
+    o2 = solve(ODEProblem(sys, [O3 => 20, OH => 4.0e-6 * 1.5], tspan), Rosenbrock23(), abstol = 1.0e-10, reltol = 1.0e-10)
     test2 = o1[O3][end] - o2[O3][end]
 
     @test test2 ≈ u_2 rtol = 0.01
@@ -88,14 +82,8 @@ end
     u_4 = 1.5975674827473085e-7
 
     @unpack O3, HO2 = sys
-    o1 = solve(
-        ODEProblem(sys, [O3 => 20, HO2 => 4.0e-6], tspan), Rosenbrock23(),
-        abstol = 1.0e-10, reltol = 1.0e-10
-    )
-    o2 = solve(
-        ODEProblem(sys, [O3 => 20, HO2 => 4.0e-6 * 1.5], tspan), Rosenbrock23(),
-        abstol = 1.0e-10, reltol = 1.0e-10
-    )
+    o1 = solve(ODEProblem(sys, [O3 => 20, HO2 => 4.0e-6], tspan), Rosenbrock23(), abstol = 1.0e-10, reltol = 1.0e-10)
+    o2 = solve(ODEProblem(sys, [O3 => 20, HO2 => 4.0e-6 * 1.5], tspan), Rosenbrock23(), abstol = 1.0e-10, reltol = 1.0e-10)
     test4 = o1[O3][end] - o2[O3][end]
 
     @test test4 ≈ u_4 rtol = 0.01
@@ -154,7 +142,7 @@ end
     @test_nowarn convert(System, gf_coupled)
 end
 
-@testitem "Compose GEOSChem FastJX_interpolation" begin
+@testitem "Compose GEOSChem FastJX_interpolation_troposphere" begin
     using GasChem, EarthSciMLBase
     using ModelingToolkit
 
@@ -166,14 +154,14 @@ end
     end
 
     online = jconnections(FastJX(0.0))
-    interp = jconnections(FastJX_interpolation(0.0))
+    interp = jconnections(FastJX_interpolation_troposphere(0.0))   # mech=:all (full set)
 
-    # The interpolated full-mechanism constructor must wire the *same* GEOS-Chem
-    # photolysis connections as the online `FastJX`. This is precisely what
-    # `FastJX_interpolation_troposphere` (SuperFast subset only) cannot do.
+    # With `mech=:all` the interpolated Fast-JX must wire the *same* GEOS-Chem
+    # photolysis connections as the online `FastJX`; the `mech=:superfast` subset
+    # (the historical default) only exposes the SuperFast species and cannot.
     @test !isempty(interp)
     @test interp == online
 
     # And the fully-coupled, compiled system must build.
-    @test_nowarn convert(System, couple(GEOSChemGasPhase(), FastJX_interpolation(0.0)))
+    @test_nowarn convert(System, couple(GEOSChemGasPhase(), FastJX_interpolation_troposphere(0.0)))
 end

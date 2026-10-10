@@ -1,7 +1,7 @@
 name = "GasChem"
 uuid = "58070593-4751-4c87-a5d1-63807d11d76c"
+version = "0.11.2"
 authors = ["EarthSciML authors and contributors"]
-version = "0.11.0"
 
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
@@ -23,11 +23,11 @@ EarthSciDataExt = "EarthSciData"
 [compat]
 AllocCheck = "0.2"
 BSON = "0.3.9"
-Catalyst = "15"
+Catalyst = "16"
 DocStringExtensions = "0.9.5"
 DynamicQuantities = "1"
-EarthSciData = "0.15"
-EarthSciMLBase = "0.25"
+EarthSciData = "0.15, 0.16"
+EarthSciMLBase = "0.25.3"
 Interpolations = "0.16"
 ModelingToolkit = "11"
 NonlinearSolve = "4"
@@ -49,10 +49,6 @@ SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 SymbolicIndexingInterface = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
-
-[sources.Catalyst]
-rev = "bd21d5ffac7b9b029c21db0b82daed8d89ca10cf"
-url = "https://github.com/SciML/Catalyst.jl.git"
 
 [targets]
 test = ["AllocCheck", "Test", "NonlinearSolve", "OrdinaryDiffEqDefault", "OrdinaryDiffEqRosenbrock", "EarthSciData", "SciMLBase", "SymbolicIndexingInterface", "TestItemRunner"]

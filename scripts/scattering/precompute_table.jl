@@ -11,7 +11,7 @@ include(joinpath(@__DIR__, "cloudj_solver.jl"))
 using BSON
 using Interpolations: interpolate, Gridded, Linear, extrapolate, Flat
 
-const ALBEDO = 0.10
+const ALBEDO = 0.1
 
 # --- axes from the existing table ------------------------------------------
 BSON.@load joinpath(@__DIR__, "..", "..", "src", "tropospheric_interpolation_data.bson") Z_all tropospheric_P cosSZA_vals
@@ -23,8 +23,10 @@ const U0_nodes = collect(cosSZA_vals)        # -0.2 .. 1.0
 # (the 74th edge is the ZZHT top-of-atmosphere pad; assign it P = 0).
 const P_edges = vcat(collect(GasChem.P_levels), 0.0)
 
-println("Precomputing $(length(U0_nodes)) SZA nodes x 18 bands x ",
-    length(P_nodes), " pressure nodes (albedo = $ALBEDO, AOD = 0) ...")
+println(
+    "Precomputing $(length(U0_nodes)) SZA nodes x 18 bands x ",
+    length(P_nodes), " pressure nodes (albedo = $ALBEDO, AOD = 0) ..."
+)
 
 # Two products:
 #   Z_diffuse - the DIFFUSE-ONLY field 4*FJ (what a box model cannot compute
@@ -49,7 +51,8 @@ for (ju, u0) in enumerate(U0_nodes)
         # ascending knots; P_edges is descending in index)
         itp = extrapolate(
             interpolate((reverse(P_edges),), reverse(Dabs), Gridded(Linear())),
-            Flat())
+            Flat()
+        )
         for (jp, P) in enumerate(P_nodes)
             D = max(itp(P), 0.0)
             Z_diffuse[band][jp, ju] = D
@@ -70,12 +73,18 @@ for band in 1:18
     news = Z_new[band][iP_s, iU_1]
     oldm = Z_old[band][iP_m, iU_h]
     newm = Z_new[band][iP_m, iU_h]
-    r = filter(isfinite, vec(Z_new[band] ./ max.(Z_old[band], 1e-30)))
-    println(rpad(band, 5), "| ",
+    r = filter(isfinite, vec(Z_new[band] ./ max.(Z_old[band], 1.0e-30)))
+    println(
+        rpad(band, 5), "| ",
         rpad(olds > 0 ? round(news / olds, digits = 3) : "-", 19), "| ",
         rpad(oldm > 0 ? round(newm / oldm, digits = 3) : "-", 21), "| ",
-        round(maximum(r[vec(Z_old[band]) .> 1e-30 * maximum(Z_old[band])];
-            init = 0.0), digits = 2))
+        round(
+            maximum(
+                r[vec(Z_old[band]) .> 1.0e-30 * maximum(Z_old[band])];
+                init = 0.0
+            ), digits = 2
+        )
+    )
 end
 
 # --- write -----------------------------------------------------------------
