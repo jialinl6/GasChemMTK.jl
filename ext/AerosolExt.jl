@@ -183,6 +183,11 @@ function EarthSciMLBase.couple2(
     )
 end
 
+# The Aerosol couplings need the species that SuperFast(; aerosol = false) drops.
+_require_aerosol(c) = GasChem.has_aerosol_species(c) || throw(
+    ArgumentError("this coupling needs SuperFast's aerosol species; build it with SuperFast(; aerosol = true)")
+)
+
 """
     couple2(c::SuperFastCoupler, cc::CloudChemistryFixedpHCoupler)
 
@@ -196,6 +201,7 @@ function EarthSciMLBase.couple2(
         cc::Aerosol.CloudChemistryFixedpHCoupler
     )
     c, cc = c.sys, cc.sys
+    _require_aerosol(c)
     # NOTE (differs from the GEOS-Chem method above): the SuperFast↔GEOSFP coupling
     # param_to_var's T *and* P (EarthSciDataExt.jl `param_to_var(c, :T, :P, :H2O)`),
     # whereas the GEOS-Chem↔GEOSFP coupling leaves P a scalar parameter. So here T and P
@@ -273,6 +279,7 @@ function EarthSciMLBase.couple2(
         a::Aerosol.AerosolDistributionCoupler
     )
     c, a = c.sys, a.sys
+    _require_aerosol(c)
 
     @constants(
         k_B = 1.380649e-23,

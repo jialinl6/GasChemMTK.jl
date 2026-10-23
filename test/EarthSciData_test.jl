@@ -298,3 +298,31 @@ end
     @test !isapprox(divisor_mw(f_HONO), MW_HNO2; rtol = 0.01)
     @test divisor_mw(emis_factor(gc, "GEOSChemGasPhase", "CO")) ≈ MW_CO rtol = 1.0e-6
 end
+
+@testitem "Gas-only SuperFast couples to NEI2016 and GEOS-FP" begin
+    using GasChem, EarthSciData
+    using Dates, ModelingToolkit, EarthSciMLBase
+
+    domain = DomainInfo(
+        DateTime(2016, 5, 1),
+        DateTime(2016, 5, 2);
+        latrange = deg2rad(-85.0f0):deg2rad(2):deg2rad(85.0f0),
+        lonrange = deg2rad(-180.0f0):deg2rad(2.5):deg2rad(175.0f0),
+        levrange = 1:10
+    )
+    sys = convert(
+        System,
+        couple(
+            SuperFast(; aerosol = false),
+            NEI2016MonthlyEmis("mrggrid_withbeis_withrwc", domain),
+            GEOSFP("4x5", domain),
+            domain
+        )
+    )
+    us = string.(unknowns(sys))
+    @test length(filter(u -> startswith(u, "SuperFast₊"), us)) == 12
+    @test !any(u -> occursin(r"SuperFast₊(SO2|SO4|NH3)\(", u), us)
+    eqstr = join(string.(equations(sys)), "\n")
+    @test occursin("NEI2016MonthlyEmis_NO(t)", eqstr)   # gas emissions still arrive
+    @test !occursin("LWC_cld", eqstr)                    # no cloud-water coupling
+end

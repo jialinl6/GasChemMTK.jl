@@ -104,6 +104,12 @@ end
     @test any(o -> occursin("S_t", o), obs)
 end
 
+@testitem "SF-aerosol: gas-only SuperFast refuses the Aerosol couplings" setup = [SFAeroSetup] begin
+    gas = GasChem.SuperFast(; aerosol = false)
+    @test_throws ArgumentError convert(System, couple(gas, Aerosol.CloudChemistryFixedpH(), SFTestMet()))
+    @test_throws ArgumentError convert(System, couple(gas, Aerosol.AerosolDistribution(), SFTestMet()))
+end
+
 @testitem "SF-aerosol: triple coupling compiles without duplicate names + conserves" setup = [SFAeroSetup] begin
     # SFTestMet plays the CTM met coupling's role (param_to_var(c,:T,:P) + connector
     # equations), so the three-way param_to_var(:T) collision surface (met + cloud +

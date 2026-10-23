@@ -181,6 +181,27 @@ struct SuperFastCoupler
     sys::Any
 end
 
+# Species and parameters that only serve the aerosol, cloud and ISORROPIA couplings.
+const _SF_AEROSOL_NAMES = (
+    :SO2, :SO4, :NH3, :NH4, :NIT, :N2O5, :NO3,
+    :k_cld1, :LWC_cld, :inv_LWC_ref, :k_het_N2O5, :k_het_HO2, :k_het_NO2, :k_het_NO3,
+)
+
+# Gas-only SuperFast: drop the aerosol species, their parameters and every reaction using them.
+function _drop_aerosol(rs)
+    isaero(x) = Symbol(ModelingToolkit.getname(x)) in _SF_AEROSOL_NAMES
+    uses_aero(r) = any(isaero, ModelingToolkit.Symbolics.get_variables(r.rate)) ||
+        any(isaero, r.substrates) || any(isaero, r.products)
+    return ReactionSystem(
+        filter(!uses_aero, reactions(rs)), ModelingToolkit.get_iv(rs),
+        filter(!isaero, unknowns(rs)), filter(!isaero, ModelingToolkit.parameters(rs));
+        name = nameof(rs)
+    )
+end
+
+# Whether a SuperFast system carries the aerosol species (`SuperFast(; aerosol = true)`).
+has_aerosol_species(sys) = any(u -> Symbol(ModelingToolkit.getname(u)) === :SO2, unknowns(sys))
+
 """
     SuperFast()
 
@@ -193,6 +214,11 @@ The input of the function is Temperature, concentrations of all chemicals, and r
 
 If the keyword argument `rxn_sys` is set to `true`, the function will return a reaction system instead of an ODE system.
 
+With `aerosol = false` the function returns the 12-species gas-phase mechanism: the aerosol
+species (SO2, SO4, NH3, NH4, NIT, N2O5, NO3), the cloud and heterogeneous-uptake rate
+parameters, and the reactions that use them are left out. Gas-phase results are identical,
+since those reactions are inert unless an Aerosol module is coupled.
+
 # Example
 
 ```
@@ -202,7 +228,7 @@ sol = solve(ODEProblem(mtkcompile(rs), [], (0,360), [], combinatoric_ratelaws=fa
 plot(sol)
 ```
 """
-function SuperFast(; name = :SuperFast, rxn_sys = false)
+function SuperFast(; name = :SuperFast, rxn_sys = false, aerosol = true)
     # Create reaction rate constant system constructors
     rate_systems = []
     i = 1
@@ -343,6 +369,7 @@ function SuperFast(; name = :SuperFast, rxn_sys = false)
         jH2COb, CH2O --> CO
         jCH3OOH, CH3OOH --> CH2O + HO2 + OH
     end
+    aerosol || (rx_sys = _drop_aerosol(rx_sys))
     rxns = compose(rx_sys, rate_systems)
     if rxn_sys
         return rxns

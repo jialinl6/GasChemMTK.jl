@@ -48,24 +48,27 @@ function EarthSciMLBase.couple2(
     # (`operator_compose`'s `normalize_translate(::AbstractVector)` + `findall` handle
     # duplicate left-hand species natively).
     uconv = nmolpermol * MW_Air # Conversion factor with MW factored out.
-    return operator_compose(
-        convert(System, c),
-        e,
-        [
-            c.NO2 => e.NO2 => uconv / MW_NO2,
-            c.NO => e.NO => uconv / MW_NO2, # NEI NO is NOx-as-NO2 mass
-            c.CH2O => e.FORM => uconv / MW_FORM,
-            #c.CH4 => e.CH4 => uconv / MW_CH4, # CH4 is currently a constant in SuperFast.
-            c.CO => e.CO => uconv / MW_CO,
-            c.ISOP => e.ISOP => uconv / MW_ISOP,
-            # SF-aerosol port: SO2 (gas) + SULF (direct sulfate) + NH3 (livestock/other +
-            # fertilizer sectors) feed the het/cloud/ISORROPIA components.
-            c.SO2 => e.SO2 => uconv / MW_SO2,
-            c.SO4 => e.SULF => uconv / MW_SULF,
-            c.NH3 => e.NH3 => uconv / MW_NH3,
-            c.NH3 => e.NH3_FERT => uconv / MW_NH3,
-        ]
-    )
+    translate = [
+        c.NO2 => e.NO2 => uconv / MW_NO2,
+        c.NO => e.NO => uconv / MW_NO2, # NEI NO is NOx-as-NO2 mass
+        c.CH2O => e.FORM => uconv / MW_FORM,
+        #c.CH4 => e.CH4 => uconv / MW_CH4, # CH4 is currently a constant in SuperFast.
+        c.CO => e.CO => uconv / MW_CO,
+        c.ISOP => e.ISOP => uconv / MW_ISOP,
+    ]
+    # SF-aerosol port: SO2 (gas) + SULF (direct sulfate) + NH3 (livestock/other +
+    # fertilizer sectors) feed the het/cloud/ISORROPIA components; absent with aerosol = false.
+    if GasChem.has_aerosol_species(c)
+        append!(
+            translate, [
+                c.SO2 => e.SO2 => uconv / MW_SO2,
+                c.SO4 => e.SULF => uconv / MW_SULF,
+                c.NH3 => e.NH3 => uconv / MW_NH3,
+                c.NH3 => e.NH3_FERT => uconv / MW_NH3,
+            ]
+        )
+    end
+    return operator_compose(convert(System, c), e, translate)
 end
 
 function EarthSciMLBase.couple2(
@@ -209,21 +212,19 @@ function EarthSciMLBase.couple2(c::GasChem.SuperFastCoupler, g::EarthSciData.GEO
         R_lwc = 8.31446261815324,
         [unit = u"m^3*Pa/mol/K", description = "Ideal gas constant (LWC conversion)"],
     )
-    c = param_to_var(c, :T, :P, :H2O, :LWC_cld)
-    return ConnectorSystem(
-        [
-            c.T ~ g.I3₊T,
-            c.P ~ g.P,
-            c.H2O ~ water_concentration_ppb(g.A3dyn₊RH, g.P * P_inv, g.I3₊T * T_inv) * ppb_unit,
-            # cloud gating: grid-mean LWC from met scales the in-cloud
-            # SO2+H2O2 rate (the mechanism multiplies k_cld1 by LWC_cld/LWC_ref).
-            # QL [kg/kg] x rho_air [g/m^3] = grid-mean LWC [g/m^3]; QL~0 in ice/no-cloud
-            # cells gates the channel off (implicit temperature cutoff).
-            c.LWC_cld ~ g.A3cld₊QL * g.P * MWair / (R_lwc * g.I3₊T),
-        ],
-        c,
-        g
-    )
+    aero = GasChem.has_aerosol_species(c)
+    c = param_to_var(c, :T, :P, :H2O, (aero ? (:LWC_cld,) : ())...)
+    eqs = [
+        c.T ~ g.I3₊T,
+        c.P ~ g.P,
+        c.H2O ~ water_concentration_ppb(g.A3dyn₊RH, g.P * P_inv, g.I3₊T * T_inv) * ppb_unit,
+    ]
+    # cloud gating: grid-mean LWC from met scales the in-cloud
+    # SO2+H2O2 rate (the mechanism multiplies k_cld1 by LWC_cld/LWC_ref).
+    # QL [kg/kg] x rho_air [g/m^3] = grid-mean LWC [g/m^3]; QL~0 in ice/no-cloud
+    # cells gates the channel off (implicit temperature cutoff). Skipped with aerosol = false.
+    aero && push!(eqs, c.LWC_cld ~ g.A3cld₊QL * g.P * MWair / (R_lwc * g.I3₊T))
+    return ConnectorSystem(eqs, c, g)
 end
 
 function EarthSciMLBase.couple2(
@@ -379,16 +380,21 @@ function EarthSciMLBase.couple2(
     c, e = c.sys, e.sys
     k = _inline_emis_constants()
     uconv = k.nmolpermol * k.MW_Air
-    return operator_compose(
-        convert(System, c), e,
-        [
-            c.SO2 => e.SO2 => uconv / k.MW_SO2,
-            c.NO => e.NO => uconv / k.MW_NO,
-            c.NO2 => e.NO2 => uconv / k.MW_NO2,
-            c.CO => e.CO => uconv / k.MW_CO,
-            c.NH3 => e.NH3 => uconv / k.MW_NH3,
-        ]
-    )
+    translate = [
+        c.NO => e.NO => uconv / k.MW_NO,
+        c.NO2 => e.NO2 => uconv / k.MW_NO2,
+        c.CO => e.CO => uconv / k.MW_CO,
+    ]
+    # SO2 and NH3 exist only with SuperFast(; aerosol = true).
+    if GasChem.has_aerosol_species(c)
+        append!(
+            translate, [
+                c.SO2 => e.SO2 => uconv / k.MW_SO2,
+                c.NH3 => e.NH3 => uconv / k.MW_NH3,
+            ]
+        )
+    end
+    return operator_compose(convert(System, c), e, translate)
 end
 
 function EarthSciMLBase.couple2(

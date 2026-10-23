@@ -118,3 +118,26 @@ end
 
     @test test5 ≈ u_ch4
 end
+
+@testitem "SuperFast(aerosol = false): 12-species gas mechanism" begin
+    using GasChem, OrdinaryDiffEqRosenbrock, ModelingToolkit
+    gas = mtkcompile(SuperFast(; aerosol = false))
+    full = mtkcompile(SuperFast())
+    @test sort(string.(unknowns(gas))) == sort(
+        [
+            "O3(t)", "OH(t)", "HO2(t)", "NO(t)", "NO2(t)", "CH3O2(t)", "CH2O(t)", "CO(t)",
+            "CH3OOH(t)", "ISOP(t)", "H2O2(t)", "HNO3(t)",
+        ]
+    )
+    @test length(unknowns(full)) == 19
+    pnames = string.(ModelingToolkit.parameters(gas))
+    @test !any(p -> p in pnames, ["k_cld1", "LWC_cld", "k_het_N2O5", "k_het_HO2", "k_het_NO2", "k_het_NO3"])
+    @test !GasChem.has_aerosol_species(SuperFast(; aerosol = false))
+    @test GasChem.has_aerosol_species(SuperFast())
+    # the dropped reactions are inert by default, so gas-phase results are unchanged
+    o3(sys) = solve(
+        ODEProblem(sys, [], (0.0, 360.0)), Rosenbrock23(),
+        saveat = 10.0, abstol = 1.0e-12, reltol = 1.0e-12
+    )[sys.O3][end]
+    @test o3(gas) ≈ o3(full) rtol = 1.0e-8
+end
