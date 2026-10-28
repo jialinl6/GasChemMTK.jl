@@ -147,8 +147,8 @@ function EarthSciMLBase.couple2(
             c.SO2 => e.SO2 => uconv / MW_SO2,
             c.ISOP => e.ISOP => uconv / MW_ISOP,
             # NEI ammonia: the merged grid keeps anthropogenic (livestock/other, `NH3`) and
-            # fertilizer (`NH3_FERT`) sectors separate, so sum both into total NH3 — same
-            # two-source pattern as SO2+SULF above. NH3 feeds the ISORROPIA aerosol partition
+            # fertilizer (`NH3_FERT`) sectors separate, so sum both into total NH3 (two
+            # entries keyed on c.NH3 are summed). NH3 feeds the ISORROPIA aerosol partition
             # (IsorropiaOp). (If a NEI product reports NH3 inclusive of fertilizer, drop the
             # NH3_FERT term to avoid double-counting.)
             c.NH3 => e.NH3 => uconv / MW_NH3,
